@@ -19,7 +19,13 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Get Started',
       collapsed: false,
-      items: ['get-started/introduction', 'get-started/quickstart', 'get-started/access'],
+      items: ['get-started/start-here', 'get-started/quickstart', 'get-started/introduction', 'get-started/access'],
+    },
+    {
+      type: 'category',
+      label: 'Recipes',
+      collapsed: false,
+      items: ['recipes/evaluate-vs-your-book'],
     },
     {
       type: 'category',

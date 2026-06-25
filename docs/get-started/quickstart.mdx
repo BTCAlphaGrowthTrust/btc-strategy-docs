@@ -6,8 +6,9 @@ sidebar_position: 1
 
 # Quickstart
 
-Your first cross-strategy correlation in **three calls** — no key required (the API is open
-today). Base URL: `https://btc-strategy-data-api.fly.dev`.
+Your first cross-strategy correlation in **three calls**, **no key** — these are the open
+**preview** tier. New here? Start with **[Start here](/docs/get-started/start-here)** (try-it +
+the evaluate-against-your-book recipe). Base URL: `https://btc-strategy-data-api.fly.dev`.
 
 :::note Factual data, not advice
 Every response is **backtested / modelled historical** data for professional & institutional
@@ -41,17 +42,23 @@ curl "https://btc-strategy-data-api.fly.dev/v1/correlation?period=daily"
 
 Pearson correlation of aligned daily returns — **risk-invariant** (unchanged by `risk_pct`).
 
-## 3 · Get the book-level view
+## 3 · The diversification snapshot
 
 ```bash
 curl https://btc-strategy-data-api.fly.dev/v1/summary
 ```
 
+Preview returns the **diversification snapshot** — mean correlation and effective bets. The
+equal-weight **book performance** is full-tier (keyed); preview returns it as `null`:
+
 ```json
 { "data": { "strategy_count": 14, "mean_pairwise_correlation": 0.353,
-            "equal_weight_book": { "cagr_pct": 24.28, "sharpe_daily_annualized": 1.63 },
-            "diversification": { "effective_bets": 2.51 } } }
+            "diversification": { "effective_bets": 2.51 },
+            "equal_weight_book": null, "book_level_gated": true } }
 ```
+
+→ Unlock the book stats + the full per-strategy series with a key:
+[Access & Authentication](/docs/get-started/access).
 
 ## Where next
 

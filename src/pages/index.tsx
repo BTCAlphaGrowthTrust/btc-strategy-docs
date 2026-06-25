@@ -24,11 +24,17 @@ export default function Home(): ReactNode {
             <div className={styles.eyebrow}>BTC ALPHA · STRATEGY DATA API</div>
             <h1 className={styles.title}>Backtested strategy performance data, built for institutions.</h1>
             <p className={styles.subtitle}>
-              Factual, modelled historical performance for a curated set of BTC trading strategies —
-              stats, returns, equity curves and cross-strategy correlation over one clean REST/JSON API.
+              Backtested, low-correlation BTC return streams — stats, returns, equity curves and
+              cross-strategy correlation over one clean REST/JSON API, to measure against your own book.
             </p>
+            <div className={styles.tryit}>
+              <div className={styles.tryitLabel}>Try it — no key</div>
+              <pre className={styles.tryitCode}><code>curl https://btc-strategy-data-api.fly.dev/v1/strategies</code></pre>
+              <div className={styles.tryitCaption}>Real backtested track records for 14 strategies, in one open call.</div>
+            </div>
             <div className={styles.cta}>
-              <Link className="button button--primary button--lg" to="/docs/get-started/quickstart">Quickstart →</Link>
+              <Link className="button button--primary button--lg" to="/docs/get-started/start-here">Start here →</Link>
+              <Link className="button button--secondary button--lg" to="/docs/recipes/evaluate-vs-your-book">The recipe</Link>
               <Link className="button button--secondary button--lg" to="/docs/api-reference">API Reference</Link>
             </div>
             <div className={styles.note}>

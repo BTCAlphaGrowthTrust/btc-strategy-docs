@@ -1,0 +1,135 @@
+---
+title: Start here
+description: Try the API in 60 seconds (no key), then evaluate a strategy against your own book in 20 lines of Python.
+sidebar_label: Start here
+sidebar_position: 0
+---
+
+# Independent return streams for your book
+
+**BTC Alpha** is backtested performance data for **14 systematic BTC strategies**, delivered as a
+clean REST/JSON API so you can measure them against **your own portfolio**. Factual, modelled
+historical data — not advice, not a recommendation, not a forecast.
+
+## Try it in 60 seconds — no key
+
+The catalogue, correlation matrix and headline stats are **open** (preview tier — no key):
+
+```bash
+curl https://btc-strategy-data-api.fly.dev/v1/strategies
+```
+```json
+{
+  "data": [
+    { "id": "helios", "name": "Helios", "tv_status": "provisional",
+      "headline": { "cagr_pct": 50.51, "max_drawdown_pct": -33.32,
+                    "sharpe_daily_annualized": 1.18, "profit_factor": 2.60, "trade_count": 240 } }
+  ],
+  "meta": { "basis": "backtested", "count": 14 },
+  "links": { "self": "/v1/strategies", "summary": "/v1/summary", "dataset": "/v1/dataset" }
+}
+```
+
+Real backtested track records, instantly — see them before you sign up. ([what's open vs gated ↓](#preview-vs-full))
+
+## Why a quant cares
+
+These aren't tips — they're **return series**. Most crypto books are long-BTC-beta; these strategies
+move largely independently of each other (mean pairwise correlation ≈ **0.35** → about **2.5
+independent bets** across the 14). The question that actually matters isn't "what's the CAGR" — it's:
+
+> **Does adding one of these to _my_ book improve its risk-adjusted return?**
+
+Here's that question, answered as 20 lines of Python.
+
+## The recipe: does this improve my book?
+
+```python
+# Pull a strategy's daily returns, correlate with YOUR book, and see what blending
+# it in does to your Sharpe.   pip install requests numpy
+import csv, requests, numpy as np
+
+API, KEY, STRAT = "https://btc-strategy-data-api.fly.dev", "btca_live_...", "helios"
+
+r = requests.get(f"{API}/v1/strategies/{STRAT}/returns",
+                 params={"period": "daily"}, headers={"X-API-Key": KEY})
+r.raise_for_status()
+strat = {p["t"]: p["ret"] for p in r.json()["data"]}
+
+# YOUR book's daily returns, same ISO dates (CSV columns: date,return)
+mine = {row["date"]: float(row["return"]) for row in csv.DictReader(open("my_returns.csv"))}
+
+dates = sorted(set(strat) & set(mine))
+s = np.array([strat[d] for d in dates]); b = np.array([mine[d] for d in dates])
+sharpe = lambda x: x.mean() / x.std(ddof=1) * np.sqrt(365)
+
+print(f"correlation to your book : {np.corrcoef(s, b)[0,1]:+.2f}")
+print(f"your book Sharpe         : {sharpe(b):.2f}")
+for w in (0.10, 0.20, 0.30):
+    print(f"  + {w:.0%} {STRAT:<7} -> Sharpe {sharpe((1-w)*b + w*s):.2f}")
+```
+
+**What it looks like** — an **illustrative** run where "your book" is a *sample* diversified book
+(an equal-weight blend of the other strategies). **Your numbers will differ — plug in your own returns:**
+
+```text
+correlation to your book : +0.16     (near 0 = an almost independent return stream)
+your book Sharpe         : 1.46
+  + 10% helios -> Sharpe 1.67
+  + 20% helios -> Sharpe 1.74
+  + 30% helios -> Sharpe 1.69
+```
+
+:::warning Illustrative example — not a promise of your result
+The "book" above is a **sample** (an equal-weight blend of the other strategies), shown so you can
+see the shape of the answer. It is **not a forecast of your portfolio's outcome.** Swap in *your*
+returns and read *your* number. All figures are **backtested / modelled historical** data,
+**provisional** pending independent (TradingView) verification — not advice, not a recommendation.
+:::
+
+The takeaway you'd reason about: a near-zero correlation means the strategy is a largely independent
+return stream, so a modest sleeve can lift a book's risk-adjusted return through diversification —
+*if it holds for your book*. That's the point: **run it on your data.**
+
+→ **[Full runnable recipe](/docs/recipes/evaluate-vs-your-book)** — including a **no-key taste** you can
+run right now (uses the open correlation matrix), the CSV loader, and how to size the sleeve.
+
+## Preview vs Full
+
+Taste before you buy. The funnel is open; the per-strategy series and the aligned matrix are the paid product.
+
+| Endpoint | Preview — **try now, no key** | Full — keyed |
+|---|---|---|
+| `GET /v1/strategies` · `/v1/strategies/{id}` | ✅ catalogue + headline + metadata | ✅ |
+| `GET /v1/correlation` | ✅ cross-strategy matrix | ✅ |
+| `GET /v1/summary` | ⚠️ diversification snapshot only | ✅ + equal-weight book |
+| `GET /v1/strategies/{id}/stats · /returns · /curve` | ❌ `403` | ✅ full series |
+| `GET /v1/export` (aligned returns matrix) | ❌ `403` | ✅ Full-catalogue tier |
+
+Try these **right now**, no key:
+```bash
+curl "https://btc-strategy-data-api.fly.dev/v1/correlation?period=daily"
+curl "https://btc-strategy-data-api.fly.dev/v1/summary"
+```
+
+## Get the full data
+
+1. **Request a key** at **[btcalpha.com.au/access](https://btcalpha.com.au/access)** — Single (one
+   strategy), Bundle (a set), or Full (all 14 + book-level + `/export`).
+2. Send it as the **`X-API-Key`** header — see **[Access & Authentication](/docs/get-started/access)**.
+3. Run the [recipe](/docs/recipes/evaluate-vs-your-book) against your own book.
+
+<CardGroup cols={2}>
+  <Card title="The recipe" href="/docs/recipes/evaluate-vs-your-book">
+    Evaluate a strategy (or a bundle) against your portfolio — runnable Python.
+  </Card>
+  <Card title="Access & Authentication" href="/docs/get-started/access">
+    Preview vs full, the X-API-Key header, 401/403 meaning.
+  </Card>
+  <Card title="API Reference" href="/docs/api-reference">
+    Every endpoint with schemas, examples and a live playground.
+  </Card>
+  <Card title="Methodology" href="/docs/methodology/overview">
+    Exactly how every number is produced — checked against the data.
+  </Card>
+</CardGroup>

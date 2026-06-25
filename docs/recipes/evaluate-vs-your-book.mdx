@@ -1,0 +1,117 @@
+---
+title: Evaluate a strategy against your book
+description: Runnable Python — correlate a strategy's returns with your own and see what blending it in does to your Sharpe.
+sidebar_label: Evaluate vs your book
+sidebar_position: 0
+---
+
+# Evaluate a strategy against your book
+
+The question you actually have: **does adding a BTC Alpha strategy to my portfolio improve its
+risk-adjusted return?** Two snippets below — a **no-key taste** you can run right now, and the
+**full recipe** that measures a strategy against *your* returns.
+
+:::note Factual data, not advice
+Everything here is **backtested / modelled historical** data, **provisional** pending independent
+(TradingView) verification. Past performance is not indicative of future results — not advice, not
+a recommendation, not a forecast. The example numbers are illustrative; **run it on your own data.**
+:::
+
+## Taste it now — no key
+
+How independent are the 14 strategies from each other? One open call:
+
+```python
+import requests
+API = "https://btc-strategy-data-api.fly.dev"
+s = requests.get(f"{API}/v1/summary").json()["data"]          # preview tier — no key
+print(f"{s['strategy_count']} strategies, mean pairwise correlation {s['mean_pairwise_correlation']:.2f}")
+print(f"-> behave like {s['diversification']['effective_bets']:.1f} independent bets")
+```
+```text
+14 strategies, mean pairwise correlation 0.35
+-> behave like 2.5 independent bets
+```
+
+Low mutual correlation is the raw material for diversification. The next step is the one that
+matters: how a strategy sits against **your** book.
+
+## The full recipe — vs your book (keyed)
+
+Pull a strategy's full daily return series (gated — your key unlocks it), align it with your own
+daily returns, and see the correlation and the effect on your Sharpe.
+
+```python
+# pip install requests numpy
+import csv, requests, numpy as np
+
+API   = "https://btc-strategy-data-api.fly.dev"
+KEY   = "btca_live_..."          # your subscription key — request one at btcalpha.com.au/access
+STRAT = "helios"                 # any slug from GET /v1/strategies
+
+# 1 — the strategy's full daily return series (gated; your key unlocks it)
+r = requests.get(f"{API}/v1/strategies/{STRAT}/returns",
+                 params={"period": "daily"}, headers={"X-API-Key": KEY})
+r.raise_for_status()
+strat = {p["t"]: p["ret"] for p in r.json()["data"]}
+
+# 2 — YOUR book's daily returns, keyed by the same ISO dates (see "Plug in your returns" below)
+mine = {row["date"]: float(row["return"]) for row in csv.DictReader(open("my_returns.csv"))}
+
+# 3 — align on common dates, then measure
+dates = sorted(set(strat) & set(mine))
+s = np.array([strat[d] for d in dates])
+b = np.array([mine[d]  for d in dates])
+sharpe = lambda x: x.mean() / x.std(ddof=1) * np.sqrt(365)
+
+rho = np.corrcoef(s, b)[0, 1]
+print(f"correlation to your book : {rho:+.2f}   (near 0 = independent return stream)")
+print(f"your book Sharpe         : {sharpe(b):.2f}")
+for w in (0.10, 0.20, 0.30):
+    print(f"  + {w:.0%} {STRAT:<7} -> Sharpe {sharpe((1 - w) * b + w * s):.2f}")
+```
+
+**Illustrative run** — here "your book" is a **sample** diversified book (an equal-weight blend of
+the other strategies), shown only so you can see the shape of the answer:
+
+```text
+correlation to your book : +0.16     (near 0 = an almost independent return stream)
+your book Sharpe         : 1.46
+  + 10% helios -> Sharpe 1.67
+  + 20% helios -> Sharpe 1.74
+  + 30% helios -> Sharpe 1.69
+```
+
+:::warning Illustrative — not a promise of your result
+That sample book is **not your portfolio**, and these are **not** projected outcomes. The real
+answer is whatever you get with **your** returns plugged in. Backtested/modelled, provisional, not advice.
+:::
+
+A near-zero correlation means the strategy is a largely independent return stream, so a modest
+sleeve *can* raise a book's risk-adjusted return through diversification — **if it holds for yours.**
+
+## Plug in your returns
+
+`mine` is a `{ISO-date: daily-return}` dict. The snippet reads a CSV with two columns:
+
+```text
+date,return
+2018-08-15,0.0042
+2018-08-16,-0.0011
+...
+```
+Use decimal daily returns (0.0042 = +0.42%), aligned to UTC dates. Any source works — swap the CSV
+loader for your dataframe.
+
+## Variations
+
+- **Whole bundle, not one strategy.** Loop the call over several slugs (e.g. a bundle's members) and
+  blend the equal-weight sleeve into your book.
+- **Best sleeve size.** Sweep `w` on a finer grid and pick the weight that maximises `sharpe`.
+- **Pick the least-correlated first.** Use the open `GET /v1/correlation` (no key) to rank strategies
+  by how independent they are before you subscribe.
+
+## Get a key
+
+Request access at **[btcalpha.com.au/access](https://btcalpha.com.au/access)** (Single / Bundle /
+Full), then send it as the **`X-API-Key`** header — see **[Access & Authentication](/docs/get-started/access)**.
