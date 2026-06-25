@@ -20,7 +20,7 @@ advice, not a recommendation, not a forecast, and not an offer.**
 
 ## What the dataset is
 
-- **17 validated strategies**, all trading **`BTC-PERPETUAL`** on Deribit — an **inverse,
+- **14 strategies**, all trading **`BTC-PERPETUAL`** on Deribit — an **inverse,
   BTC-settled** contract (PnL and balances accrue in BTC; see [Provenance](./provenance)).
 - **Backtest window:** indicators warm up from **2018-08-14**; the published series run to the
   dataset's generation date (currently **2026-06-24**) — about **7.8 years**, ~**2,871** daily
@@ -53,8 +53,8 @@ Only **validated** strategies are exported, in one of two states:
 
 | State | Count | Meaning |
 |---|---|---|
-| **`dual_verified`** | 12 | The engine backtest has been **reconciled against an independent TradingView reference implementation** — two independent implementations of the strategy agree within tolerance. |
-| **`engine_backtested`** | 5 | Validated by the engine's keyless backtest, **without** an external dual-reference reconciliation. |
+| **`dual_verified`** | 11 | The engine backtest has been **reconciled against an independent TradingView reference implementation** — two independent implementations of the strategy agree within tolerance. |
+| **`engine_backtested`** | 3 | Validated by the engine's keyless backtest, **without** an external dual-reference reconciliation. |
 
 Both are real backtests over the same public candles and the same cost model; the distinction
 is **whether a second, independent implementation was cross-checked**. The state is published on

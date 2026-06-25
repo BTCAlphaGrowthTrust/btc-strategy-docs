@@ -184,6 +184,7 @@
                       "id": "helios",
                       "name": "Helios",
                       "blurb": "The flagship \u2014 the highest backtested return in the lineup, and one of its most independent.",
+                      "tv_status": "provisional",
                       "instrument": "BTC-PERPETUAL",
                       "base_risk_pct": 0.025,
                       "verification_state": "dual_verified",
@@ -682,6 +683,7 @@
                     "id": "helios",
                     "name": "Helios",
                     "blurb": "The flagship \u2014 the highest backtested return in the lineup, and one of its most independent.",
+                    "tv_status": "provisional",
                     "instrument": "BTC-PERPETUAL",
                     "base_risk_pct": 0.025,
                     "verification_state": "dual_verified",
@@ -1721,6 +1723,11 @@
               }
             ],
             "title": "Blurb"
+          },
+          "tv_status": {
+            "type": "string",
+            "title": "Tv Status",
+            "default": "provisional"
           },
           "instrument": {
             "type": "string",
