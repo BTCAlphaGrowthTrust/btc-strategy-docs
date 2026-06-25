@@ -1,0 +1,65 @@
+---
+title: Quickstart
+description: Your first correlation matrix in three calls.
+sidebar_position: 1
+---
+
+# Quickstart
+
+Your first cross-strategy correlation in **three calls** — no key required (the API is open
+today). Base URL: `https://btc-strategy-data-api.fly.dev`.
+
+:::note Factual data, not advice
+Every response is **backtested / modelled historical** data for professional & institutional
+use. Past performance is not indicative of future results — not advice, not a recommendation,
+not a forecast.
+:::
+
+## 1 · Discover the strategies
+
+```bash
+curl https://btc-strategy-data-api.fly.dev/v1/strategies
+```
+
+Every response is the canonical envelope — `data`, `meta`, `links`:
+
+```json
+{
+  "data": [{ "id": "atg_4h_ema", "label": "4H EMA 50/20/200", "base_risk_pct": 0.025,
+             "verification_state": "dual_verified",
+             "headline": { "cagr_pct": 50.53, "sharpe_daily_annualized": 1.18 } }],
+  "meta": { "basis": "backtested", "dataset_version": "2026-06-24T07:40:35Z", "count": 17 },
+  "links": { "self": "/v1/strategies", "summary": "/v1/summary" }
+}
+```
+
+## 2 · Pull the correlation matrix
+
+```bash
+curl "https://btc-strategy-data-api.fly.dev/v1/correlation?period=daily"
+```
+
+Pearson correlation of aligned daily returns — **risk-invariant** (unchanged by `risk_pct`).
+
+## 3 · Get the book-level view
+
+```bash
+curl https://btc-strategy-data-api.fly.dev/v1/summary
+```
+
+```json
+{ "data": { "strategy_count": 17, "mean_pairwise_correlation": 0.315,
+            "equal_weight_book": { "cagr_pct": 19.92, "sharpe_daily_annualized": 1.42 },
+            "diversification": { "effective_bets": 2.81 } } }
+```
+
+## Where next
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" href="/docs/concepts/envelope">
+    The response envelope, errors, versioning and caching.
+  </Card>
+  <Card title="Methodology" href="/docs/methodology/overview">
+    Risk rescale, performance metrics, correlation, fees & slippage.
+  </Card>
+</CardGroup>

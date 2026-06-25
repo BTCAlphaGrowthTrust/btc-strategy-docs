@@ -1,0 +1,30 @@
+.card{
+  display:block;
+  background:var(--ifm-background-surface-color);
+  border:1px solid var(--btc-border);
+  border-radius:12px;
+  padding:1.4rem 1.5rem;
+  height:100%;
+  color:var(--ifm-color-content);
+  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.card:hover{
+  transform:translateY(-2px);
+  border-color:var(--btc-accent);
+  box-shadow:0 10px 34px rgba(245,165,36,.10);
+  color:var(--ifm-color-content);
+}
+.icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:2.25rem;height:2.25rem;margin-bottom:.85rem;
+  border-radius:9px;
+  color:var(--btc-accent);
+  background:rgba(245,165,36,.10);
+  font-size:1.2rem;
+}
+.title{
+  font-family:var(--ifm-heading-font-family);
+  font-weight:600;font-size:1.12rem;letter-spacing:-.01em;
+  margin-bottom:.35rem;
+}
+.body{color:var(--btc-text-muted);font-size:.94rem;line-height:1.5}

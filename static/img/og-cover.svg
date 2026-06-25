@@ -1,0 +1,14 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#0B0E11"/>
+  <radialgradient id="g" cx="50%" cy="0%" r="60%">
+    <stop offset="0%" stop-color="#F5A524" stop-opacity="0.16"/>
+    <stop offset="70%" stop-color="#0B0E11" stop-opacity="0"/>
+  </radialgradient>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <rect x="80" y="80" width="64" height="64" rx="16" fill="#F5A524"/>
+  <text x="112" y="128" font-family="system-ui, sans-serif" font-size="40" font-weight="700" text-anchor="middle" fill="#0B0E11">&#945;</text>
+  <text x="80" y="330" font-family="system-ui, sans-serif" font-size="64" font-weight="700" fill="#E6EDF3">BTC Alpha</text>
+  <text x="80" y="400" font-family="system-ui, sans-serif" font-size="34" font-weight="500" fill="#9DA7B3">Strategy Data API</text>
+  <text x="80" y="470" font-family="system-ui, sans-serif" font-size="24" fill="#9DA7B3">Backtested strategy performance data, built for institutions.</text>
+  <text x="80" y="560" font-family="monospace" font-size="18" fill="#F5A524">PLACEHOLDER — replace with branded artwork</text>
+</svg>
