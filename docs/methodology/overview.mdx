@@ -27,9 +27,8 @@ advice, not a recommendation, not a forecast, and not an offer.**
   return points per strategy.
 - **Source:** **public Deribit chart history** (candles). The exporter is **keyless** — it
   authenticates to nothing and reads no credentials.
-- **Execution timeframes:** 4H (11 strategies), 1H (3), 1D (2), 15m (1).
-- **Strategy families:** ribbon-squeeze (RSS), golden-cross (GX), stochastic oscillator (OSC),
-  and EMA-trend.
+- **Deliberately diverse:** the strategies are built on different, largely independent
+  return drivers — the source of the book's low cross-correlation.
 - Each strategy is sized **per-strategy at its own base risk %** (`book_size = 1`) — this is a
   single-strategy backtest, **independent of any live portfolio allocation**.
 

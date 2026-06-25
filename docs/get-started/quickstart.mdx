@@ -25,10 +25,10 @@ Every response is the canonical envelope — `data`, `meta`, `links`:
 
 ```json
 {
-  "data": [{ "id": "atg_4h_ema", "label": "4H EMA 50/20/200", "base_risk_pct": 0.025,
+  "data": [{ "id": "helios", "name": "Helios", "base_risk_pct": 0.025,
              "verification_state": "dual_verified",
-             "headline": { "cagr_pct": 50.53, "sharpe_daily_annualized": 1.18 } }],
-  "meta": { "basis": "backtested", "dataset_version": "2026-06-24T07:40:35Z", "count": 17 },
+             "headline": { "cagr_pct": 50.53, "sharpe_daily_annualized": 1.18, "profit_factor": 2.60 } }],
+  "meta": { "basis": "backtested", "dataset_version": "2026-06-24T07:40:35Z", "count": 14 },
   "links": { "self": "/v1/strategies", "summary": "/v1/summary" }
 }
 ```
