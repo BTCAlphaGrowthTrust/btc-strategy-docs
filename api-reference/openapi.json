@@ -168,7 +168,7 @@
           "strategies"
         ],
         "summary": "List strategies",
-        "description": "All strategies with metadata, base risk %, verification state, and headline backtested stats.",
+        "description": "Scan the catalogue for candidate return streams to add to your book \u2014 names, base risk %, verification state and headline backtested stats at a glance. Open preview tier (no key).",
         "operationId": "listStrategies",
         "responses": {
           "200": {
@@ -231,7 +231,7 @@
           "aggregate"
         ],
         "summary": "Book-level summary",
-        "description": "Equal-weight book stats (mean of aligned per-strategy daily returns), mean pairwise correlation, and a diversification snapshot (effective bets, most/least correlated pair).",
+        "description": "Gauge the diversification of the whole set in one call \u2014 mean pairwise correlation and effective bets (how many independent bets the 14 behave like). Preview returns the snapshot; the equal-weight book performance (what holding them together would have done) is full-tier.",
         "operationId": "getSummary",
         "responses": {
           "200": {
@@ -307,6 +307,7 @@
           "dataset"
         ],
         "summary": "Dataset metadata + provenance",
+        "description": "The provenance you cite when you put these numbers in front of your IC \u2014 window, engine, cost model and dataset version behind every figure.",
         "operationId": "getDataset",
         "responses": {
           "200": {
@@ -368,7 +369,7 @@
           "aggregate"
         ],
         "summary": "Cross-strategy correlation matrix",
-        "description": "Pearson correlation of aligned periodic returns. Risk-invariant. Optional `ids` subset.",
+        "description": "See how independent the strategies are from each other before you blend \u2014 the raw material for diversification. Pearson correlation of aligned periodic returns; risk-invariant. Optional `ids` subset. Open preview tier (no key).",
         "operationId": "getCorrelation",
         "security": [
           {
@@ -500,7 +501,7 @@
           "aggregate"
         ],
         "summary": "Aligned returns matrix + correlation (json|csv)",
-        "description": "Aligned periodic returns across all strategies plus the correlation matrix. `risk_pct` modelled-rescales returns per strategy (correlation unchanged). CSV is a raw table (not enveloped). **Full-catalogue tier (book-level) only.**",
+        "description": "Pull every strategy's aligned return series as one matrix \u2014 drop it straight into your own optimiser or correlation analysis against your book. Plus the correlation matrix; `risk_pct` modelled-rescales returns per strategy (correlation unchanged). CSV is a raw table (not enveloped). **Full-catalogue tier (book-level) only.**",
         "operationId": "getExport",
         "security": [
           {
@@ -673,6 +674,7 @@
           "strategies"
         ],
         "summary": "Strategy metadata + provenance",
+        "description": "Due diligence on one strategy before you allocate \u2014 the provenance and parameters behind its numbers: base risk, instrument, window and cost model.",
         "operationId": "getStrategy",
         "security": [
           {
@@ -786,7 +788,7 @@
           "strategies"
         ],
         "summary": "Backtested stats (optionally risk-rescaled)",
-        "description": "Backtested stats at base risk. With `risk_pct`, net return / CAGR / max-drawdown are modelled-rescaled; Sharpe/Sortino unchanged.",
+        "description": "Size a sleeve in your book \u2014 the headline risk/return of one strategy at any risk level. Backtested stats at base risk; with `risk_pct`, net return / CAGR / max-drawdown are modelled-rescaled (Sharpe/Sortino unchanged). Requires a key for an entitled strategy.",
         "operationId": "getStrategyStats",
         "security": [
           {
@@ -937,7 +939,7 @@
           "strategies"
         ],
         "summary": "Periodic returns series",
-        "description": "Daily or weekly returns. `risk_pct` linearly rescales (ret\u00d7k). `from`/`to` are ISO dates.",
+        "description": "The input to the *evaluate-against-your-book* recipe \u2014 the full daily/weekly return series to correlate against your own returns. `risk_pct` linearly rescales (ret\u00d7k); `from`/`to` are ISO dates. Requires a key for an entitled strategy.",
         "operationId": "getStrategyReturns",
         "security": [
           {
@@ -1123,7 +1125,7 @@
           "strategies"
         ],
         "summary": "Equity curve",
-        "description": "Backtested equity curve. With `risk_pct`, returned as the modelled curve recompounded from rescaled daily returns (base = 1.0).",
+        "description": "Eyeball regime behaviour and drawdowns before allocating \u2014 the compounded equity path. With `risk_pct`, the modelled curve recompounded from rescaled daily returns (base = 1.0). Requires a key for an entitled strategy.",
         "operationId": "getStrategyCurve",
         "security": [
           {
