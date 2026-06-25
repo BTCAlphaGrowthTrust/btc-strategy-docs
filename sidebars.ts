@@ -32,6 +32,7 @@ const sidebars: SidebarsConfig = {
       label: 'Core Concepts',
       items: [
         'concepts/envelope',
+        'concepts/verification',
         'concepts/error-codes',
         'concepts/rate-limits',
         'concepts/versioning',

@@ -49,16 +49,18 @@ derived from that curve and the trade list:
 
 ## Verification states
 
-Only **validated** strategies are exported, in one of two states:
+`verification_state` is our **internal validation depth** — how many independent ways we confirmed
+a strategy's numbers in-house:
 
 | State | Count | Meaning |
 |---|---|---|
-| **`dual_verified`** | 11 | The engine backtest has been **reconciled against an independent TradingView reference implementation** — two independent implementations of the strategy agree within tolerance. |
-| **`engine_backtested`** | 3 | Validated by the engine's keyless backtest, **without** an external dual-reference reconciliation. |
+| **`dual_verified`** | 11 | Results confirmed **two independent ways inside our pipeline** — two implementations agree within tolerance. |
+| **`engine_backtested`** | 3 | Validated by the engine's keyless backtest (a **single** method). |
 
-Both are real backtests over the same public candles and the same cost model; the distinction
-is **whether a second, independent implementation was cross-checked**. The state is published on
-every strategy (`verification_state`).
+Both are real backtests over the same public candles and the same cost model. This is a **separate
+axis** from `tv_status`, which tracks the **external** TradingView cross-check (all strategies are
+currently `provisional`). The two are complementary, not contradictory — both are published on
+every strategy and are explained in full at **[Verification & data confidence](/docs/concepts/verification)**.
 
 <CardGroup cols={2}>
   <Card title="Risk Rescale" href="/docs/methodology/risk-rescale">

@@ -30,7 +30,10 @@ export default function Home(): ReactNode {
             <div className={styles.tryit}>
               <div className={styles.tryitLabel}>Try it — no key</div>
               <pre className={styles.tryitCode}><code>curl https://btc-strategy-data-api.fly.dev/v1/strategies</code></pre>
-              <div className={styles.tryitCaption}>Real backtested track records for 14 strategies, in one open call.</div>
+              <pre className={styles.tryitResp}><code>{`{ "data": [{ "id": "helios", "name": "Helios", "tv_status": "provisional",
+    "headline": { "cagr_pct": 50.51, "sharpe_daily_annualized": 1.18, "profit_factor": 2.60 } }],
+  "meta": { "count": 14, "basis": "backtested" } }`}</code></pre>
+              <div className={styles.tryitCaption}>Real backtested track records for 14 strategies — returned, not just promised.</div>
             </div>
             <div className={styles.cta}>
               <Link className="button button--primary button--lg" to="/docs/get-started/start-here">Start here →</Link>

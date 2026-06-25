@@ -21,22 +21,36 @@ curl https://btc-strategy-data-api.fly.dev/v1/strategies
 ```json
 {
   "data": [
-    { "id": "helios", "name": "Helios", "tv_status": "provisional",
-      "headline": { "cagr_pct": 50.51, "max_drawdown_pct": -33.32,
-                    "sharpe_daily_annualized": 1.18, "profit_factor": 2.60, "trade_count": 240 } }
+    {
+      "id": "helios",
+      "name": "Helios",
+      "tv_status": "provisional",
+      "verification_state": "dual_verified",
+      "headline": {
+        "cagr_pct": 50.51,
+        "max_drawdown_pct": -33.32,
+        "sharpe_daily_annualized": 1.18,
+        "profit_factor": 2.60,
+        "trade_count": 240
+      }
+    }
   ],
   "meta": { "basis": "backtested", "count": 14 },
-  "links": { "self": "/v1/strategies", "summary": "/v1/summary", "dataset": "/v1/dataset" }
+  "links": { "self": "/v1/strategies", "summary": "/v1/summary" }
 }
 ```
 
-Real backtested track records, instantly — see them before you sign up. ([what's open vs gated ↓](#preview-vs-full))
+Real backtested track records, instantly — before you sign up. Each strategy carries **two
+confidence signals**: `verification_state` (internal validation depth — `dual_verified` here) and
+`tv_status` (external TradingView cross-check — `provisional` until reconciled),
+[explained here](/docs/concepts/verification). ([what's open vs gated ↓](#preview-vs-full))
 
 ## Why a quant cares
 
 These aren't tips — they're **return series**. Most crypto books are long-BTC-beta; these strategies
 move largely independently of each other (mean pairwise correlation ≈ **0.35** → about **2.5
-independent bets** across the 14). The question that actually matters isn't "what's the CAGR" — it's:
+independent bets** across the 14 — and the least-correlated pair, **helios / kronos**, is actually
+**negative at −0.09**). The question that actually matters isn't "what's the CAGR" — it's:
 
 > **Does adding one of these to _my_ book improve its risk-adjusted return?**
 

@@ -25,16 +25,20 @@ How independent are the 14 strategies from each other? One open call:
 import requests
 API = "https://btc-strategy-data-api.fly.dev"
 s = requests.get(f"{API}/v1/summary").json()["data"]          # preview tier — no key
+lc = s["diversification"]["least_correlated"]
 print(f"{s['strategy_count']} strategies, mean pairwise correlation {s['mean_pairwise_correlation']:.2f}")
 print(f"-> behave like {s['diversification']['effective_bets']:.1f} independent bets")
+print(f"least-correlated pair: {lc['pair'][0]}/{lc['pair'][1]} at {lc['correlation']:+.2f}")
 ```
 ```text
 14 strategies, mean pairwise correlation 0.35
 -> behave like 2.5 independent bets
+least-correlated pair: helios/kronos at -0.09
 ```
 
-Low mutual correlation is the raw material for diversification. The next step is the one that
-matters: how a strategy sits against **your** book.
+**What to notice:** a pair at **−0.09** is *negatively* correlated — a hedging return stream, not
+just a diversifier. Low mutual correlation is the raw material; the step that matters is how a
+strategy sits against **your** book — that's the recipe below. *(Backtested/modelled, provisional — not advice.)*
 
 ## The full recipe — vs your book (keyed)
 

@@ -26,13 +26,31 @@ Every response is the canonical envelope — `data`, `meta`, `links`:
 
 ```json
 {
-  "data": [{ "id": "helios", "name": "Helios", "base_risk_pct": 0.025,
-             "verification_state": "dual_verified",
-             "headline": { "cagr_pct": 50.53, "sharpe_daily_annualized": 1.18, "profit_factor": 2.60 } }],
+  "data": [
+    {
+      "id": "helios",
+      "name": "Helios",
+      "tv_status": "provisional",
+      "verification_state": "dual_verified",
+      "base_risk_pct": 0.025,
+      "headline": {
+        "cagr_pct": 50.51,
+        "max_drawdown_pct": -33.32,
+        "sharpe_daily_annualized": 1.18,
+        "profit_factor": 2.60,
+        "trade_count": 240
+      }
+    }
+  ],
   "meta": { "basis": "backtested", "dataset_version": "2026-06-24T07:40:35Z", "count": 14 },
-  "links": { "self": "/v1/strategies", "summary": "/v1/summary" }
+  "links": { "self": "/v1/strategies", "summary": "/v1/summary", "dataset": "/v1/dataset" }
 }
 ```
+
+**Notice — two confidence signals on every strategy:** `verification_state` is our **internal**
+validation depth (here `dual_verified` — confirmed two independent ways in-house), and `tv_status`
+is the **external** TradingView cross-check (`provisional` until reconciled; all 14 are provisional
+today). Two complementary axes, not a contradiction → [Verification & data confidence](/docs/concepts/verification).
 
 ## 2 · Pull the correlation matrix
 
@@ -41,6 +59,9 @@ curl "https://btc-strategy-data-api.fly.dev/v1/correlation?period=daily"
 ```
 
 Pearson correlation of aligned daily returns — **risk-invariant** (unchanged by `risk_pct`).
+
+**Notice:** pairs span from **atlas / hyperion at +0.93** down to **helios / kronos at −0.09** —
+that spread, from tightly-correlated to *negatively*-correlated, is the raw material for diversification.
 
 ## 3 · The diversification snapshot
 
@@ -52,10 +73,26 @@ Preview returns the **diversification snapshot** — mean correlation and effect
 equal-weight **book performance** is full-tier (keyed); preview returns it as `null`:
 
 ```json
-{ "data": { "strategy_count": 14, "mean_pairwise_correlation": 0.353,
-            "diversification": { "effective_bets": 2.51 },
-            "equal_weight_book": null, "book_level_gated": true } }
+{
+  "data": {
+    "strategy_count": 14,
+    "coverage": { "from": "2018-08-14", "to": "2026-06-25" },
+    "mean_pairwise_correlation": 0.353,
+    "diversification": {
+      "most_correlated":  { "pair": ["atlas", "hyperion"], "correlation": 0.927 },
+      "least_correlated": { "pair": ["helios", "kronos"],  "correlation": -0.094 },
+      "effective_bets": 2.51
+    },
+    "equal_weight_book": null,
+    "book_level_gated": true
+  }
+}
 ```
+
+**What to notice:** the least-correlated pair — **helios / kronos** — sits at **−0.09**, a genuinely
+independent, even mildly *hedging*, return stream. Over ~**8 years** (2018 → 2026) the 14 strategies
+behave like just **2.5 independent bets** (`effective_bets`) at a mean correlation of **0.35**.
+That's the diversification you're buying. *(Backtested / modelled, provisional — not advice.)*
 
 → Unlock the book stats + the full per-strategy series with a key:
 [Access & Authentication](/docs/get-started/access).
@@ -63,6 +100,12 @@ equal-weight **book performance** is full-tier (keyed); preview returns it as `n
 ## Where next
 
 <CardGroup cols={2}>
+  <Card title="Evaluate vs your book" href="/docs/recipes/evaluate-vs-your-book">
+    The recipe — correlate a strategy against your own returns.
+  </Card>
+  <Card title="Verification & confidence" href="/docs/concepts/verification">
+    The two confidence signals on every strategy, explained.
+  </Card>
   <Card title="Core Concepts" href="/docs/concepts/envelope">
     The response envelope, errors, versioning and caching.
   </Card>

@@ -67,7 +67,7 @@ const config: Config = {
       title: 'BTC Alpha',
       logo: {alt: 'BTC Alpha', src: 'img/logo.svg'},
       items: [
-        {to: '/docs/get-started/quickstart', label: 'Get Started', position: 'left'},
+        {to: '/docs/get-started/start-here', label: 'Get Started', position: 'left'},
         {to: '/docs/api-reference', label: 'API Reference', position: 'left'},
         {to: '/docs/methodology/overview', label: 'Methodology', position: 'left'},
         {href: 'https://btcalpha.com.au', label: 'btcalpha.com.au', position: 'right'},

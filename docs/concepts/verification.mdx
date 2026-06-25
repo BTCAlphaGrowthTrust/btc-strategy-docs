@@ -1,0 +1,60 @@
+---
+title: Verification & data confidence
+description: Two independent confidence signals on every strategy — internal validation depth and external TradingView cross-check.
+sidebar_label: Verification & confidence
+sidebar_position: 1
+---
+
+# Verification & data confidence
+
+Every strategy carries **two distinct confidence signals**. They answer different questions and
+are **complementary, not contradictory** — read them together, not against each other.
+
+| Field | Axis | The question it answers |
+|---|---|---|
+| `verification_state` | **Internal** validation depth | How many independent ways did *we* validate this in-house? |
+| `tv_status` | **External** cross-check | Has it been independently reconciled against **TradingView** yet? |
+
+## `verification_state` — internal validation depth
+
+Our in-house quality tier for a strategy's numbers:
+
+| Value | Meaning |
+|---|---|
+| `dual_verified` | Results confirmed **two independent ways** inside our pipeline — two implementations agree within tolerance. |
+| `engine_backtested` | Validated via the **engine backtest** (a single method). |
+
+Current dataset: **11 `dual_verified`, 3 `engine_backtested`** (of 14).
+
+## `tv_status` — external TradingView cross-check
+
+Whether the strategy has been independently reconciled against an **external TradingView**
+implementation:
+
+| Value | Meaning |
+|---|---|
+| `provisional` | **Not yet** independently reconciled against TradingView. |
+| `verified` | TradingView cross-check **complete**. |
+
+Current dataset: **all 14 `provisional`** — external reconciliation is in progress.
+
+## Reading them together
+
+The two axes are independent. A strategy that is **`dual_verified` + `provisional`** means:
+
+> **Validated two independent ways in-house, with the external (TradingView) reconciliation still
+> pending.** That's a strong *internal* signal **and** an honest "external check not done yet" — not a contradiction.
+
+We publish both so you can weigh confidence the way you would for any data source: how thoroughly
+it was checked **internally**, and whether an independent **external** party has reconciled it yet.
+As external cross-checks complete, `tv_status` flips to `verified`; `verification_state` is a
+separate axis and is unaffected.
+
+:::note Factual data, not advice
+All figures are **backtested / modelled historical** data. `tv_status: provisional` is the
+conservative default until external reconciliation completes. Past performance is not indicative
+of future results — not advice, not a recommendation, not a forecast.
+:::
+
+Both fields appear on every strategy in [`/v1/strategies`](/docs/api-reference/list-strategies) and
+[`/v1/strategies/{id}`](/docs/api-reference/get-strategy).
