@@ -1,0 +1,97 @@
+---
+title: Methodology — Risk Rescale
+description: The exact linear rescale applied by risk_pct, and why it is modelled.
+sidebar_label: Risk Rescale
+sidebar_position: 2
+---
+
+# Risk Rescale
+
+Stats, returns, curve and export accept an optional **`risk_pct`** (per-trade risk fraction).
+The published series are computed at each strategy's **base risk** (`base_risk_pct`); `risk_pct`
+**linearly rescales** them to a different risk level. This is a deterministic transform of the
+base-risk backtest — not a new backtest.
+
+## The exact transform
+
+Let `k = effective_risk / base_risk`. Then, point-by-point on the **daily return series**:
+
+```text
+ret'(t) = ret(t) × k
+```
+
+The equity **curve is recompounded from the rescaled returns** (not the base curve scaled by
+`k` — that would be wrong under compounding):
+
+```text
+equity'(0) = 1.0
+equity'(t) = equity'(t-1) × (1 + ret'(t))
+```
+
+**CAGR** and **max drawdown** are then **recomputed from this rescaled curve**, so they stay
+internally consistent:
+
+```text
+CAGR'   = equity'(T)^(1 / years) − 1            # years from the curve's first→last date
+maxDD'  = min_t (equity'(t) − peak'(t)) / peak'(t)
+```
+
+**Sharpe, Sortino and correlation are scale-invariant** — multiplying every return by a positive
+constant `k` leaves them unchanged — so they are returned **identical** to the base figures.
+
+:::note Worked example
+At `k = 2` (e.g. base 2.5% → `risk_pct=0.05`): every daily return doubles, the curve is
+recompounded, and **CAGR and max drawdown change** (non-linearly, because of compounding),
+while **Sharpe and Sortino are byte-for-byte the same**. You can verify this directly:
+`GET /v1/strategies/{id}/stats` vs `…/stats?risk_pct=0.05`.
+:::
+
+## What the response tells you
+
+When `risk_pct` is supplied, the response `meta` carries the full provenance of the transform:
+
+```json
+"meta": {
+  "modelled": true,
+  "base_risk_pct": 0.025,
+  "requested_risk_pct": 0.05,
+  "effective_risk_pct": 0.05,
+  "risk_pct_clamped": false
+}
+```
+
+The rescaled **curve** is returned recompounded from a `1.0` base (so `equity` is a growth
+multiple, not BTC units).
+
+## The clamp
+
+`risk_pct` is clamped to a conservative ceiling **`MAX_MODELLED_RISK_PCT = 0.10`** (10% per
+trade). A request above the ceiling is capped and flagged:
+
+```text
+effective_risk = min(requested_risk, 0.10)
+risk_pct_clamped = requested_risk > 0.10
+```
+
+## Why this is "modelled" — and the honest caveat
+
+:::warning This is modelled from base, not re-backtested at the new risk
+The rescale is a **linear model** applied to the base-risk backtest. It assumes returns scale
+exactly proportionally with risk. A genuine re-backtest at higher risk would **not** be a clean
+linear scaling, because larger positions change **fills, slippage, market impact, margin and
+liquidation dynamics, and the path of stop placement** — none of which this transform captures.
+
+Treat rescaled figures as an **illustrative "what the same return stream looks like at a
+different risk dial"**, useful for comparing strategies on a common risk basis — **not** as a
+prediction of live results at that risk, and **not** a substitute for a full re-run. The base
+figures (no `risk_pct`) are the primary, directly-backtested numbers.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Performance Metrics" href="/docs/methodology/metrics">
+    The exact definitions CAGR / maxDD / Sharpe / Sortino recompute from.
+  </Card>
+  <Card title="Try it" href="/docs/api-reference/get-strategy-stats">
+    Compare base vs rescaled stats in the API reference playground.
+  </Card>
+</CardGroup>

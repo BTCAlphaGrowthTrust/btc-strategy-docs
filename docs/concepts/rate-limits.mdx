@@ -1,0 +1,51 @@
+---
+title: Rate Limits
+description: The rate-limit contract — reserved today, not yet enforced.
+sidebar_label: Rate Limits
+sidebar_position: 3
+---
+
+# Rate Limits
+
+:::note Status today: no limit enforced
+The API currently applies **no rate limit**. Requests are not throttled. This page documents
+the **contract** so that when limits are enabled, the behaviour is already specified and your
+client can be written for it now.
+:::
+
+## The seam
+
+The `/v1` router carries a **`rate_limit` dependency** that is currently a **no-op**. Enabling
+limits is a change at that seam only — **no endpoint or response-shape changes**. The
+companion access seam (API keys) is described in
+[Access & Authentication](/docs/get-started/access).
+
+## The contract (when enabled)
+
+- Over-limit requests will return **HTTP `429`** with error code **`rate_limited`** in the
+  standard [error envelope](./error-codes).
+- Responses will carry **`RateLimit-*`** headers (limit / remaining / reset) so clients can
+  self-pace.
+- Limits will be **per-client**, tied to the API key once keys are issued.
+
+```json
+// future 429 body (not emitted today)
+{ "error": { "code": "rate_limited", "message": "rate limit exceeded", "details": null },
+  "meta": { "...register, dataset_version, timing_ms..." } }
+```
+
+## Today's guidance
+
+Until limits exist, please still be considerate: responses are **cacheable**. Each carries
+`Cache-Control: public, max-age=300, must-revalidate` and a weak `ETag` keyed on
+`dataset_version`; send `If-None-Match` to get a cheap `304 Not Modified`. The dataset only
+changes when a new snapshot is published, so aggressive polling is unnecessary.
+
+<CardGroup cols={2}>
+  <Card title="Access & Authentication" href="/docs/get-started/access">
+    The companion API-key seam and access model.
+  </Card>
+  <Card title="Error Codes" href="/docs/concepts/error-codes">
+    The 429 / rate_limited contract in the code table.
+  </Card>
+</CardGroup>

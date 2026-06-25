@@ -1,0 +1,83 @@
+---
+title: Methodology — Data Provenance
+description: Source, engine, denomination, base risk, dataset versioning, and what is not yet stamped.
+sidebar_label: Data Provenance
+sidebar_position: 6
+---
+
+# Data Provenance
+
+Where every figure comes from, how it is denominated, and how dataset versions work.
+
+## Source & engine
+
+- **Data source:** **public Deribit chart history** (candles). No private data.
+- **Engine:** the project's own **`Deribit-native BTC-PERPETUAL DRY_RUN` backtest** — the
+  engine's keyless validation harness, run **bar-by-bar** over those candles. It
+  **authenticates to nothing**, reads **no credentials**, and is **not the live trading
+  engine**. (Isolation is enforced by a guard test in the exporter's repo.)
+- The exporter re-runs this backtest per strategy and persists the equity curve, daily/weekly
+  returns, stats, and the cross-strategy correlation matrices as static JSON, served read-only
+  by this API.
+
+## Denomination — BTC inverse
+
+:::warning Returns are BTC-denominated
+`BTC-PERPETUAL` is an **inverse, BTC-settled** contract: margin, PnL and balances accrue in
+**BTC**. Every return, curve and statistic is therefore in **BTC terms** (`ccy: "BTC"`), **not
+USD**. A BTC-denominated return is **not** the same as a USD return — converting requires the
+BTC/USD path over the same window, which this dataset does not apply. Interpret all performance
+as "in BTC."
+:::
+
+## Sizing — base risk, single strategy
+
+- Each strategy is simulated at its own **`base_risk_pct`** (per-trade risk fraction). Across
+  the set these are **1.0%–2.5%** (`0.01`, `0.015`, `0.02`, `0.025`).
+- The backtest forces **`book_size = 1`** — i.e. **single-strategy** sizing at base risk.
+
+:::note Not the live portfolio
+These figures are **per-strategy at base risk**, independent of any live multi-strategy
+allocation. They are **not** the live engine's combined book (which sizes differently across
+several sub-accounts). Use [`risk_pct`](./risk-rescale) to view a strategy at a different risk
+dial, and [`/v1/summary`](/docs/api-reference/get-summary) for an equal-weight book view — but
+neither is a claim about a specific live allocation.
+:::
+
+## Window
+
+- **Warm-up from `2018-08-14`** (indicators warm here); published series run to the dataset's
+  generation date (currently **`2026-06-24`**) — ~**2,871** daily points (~7.8 years).
+- Each strategy's exact `window` (`from`/`to`) is on its metadata.
+
+## Dataset versioning
+
+- The dataset is a **static, immutable snapshot**. `manifest.generated_utc` is the
+  **`dataset_version`**, surfaced in **every** API response `meta`, on `/v1/dataset`, and used
+  for `ETag`/`304` cache revalidation.
+- A new snapshot is produced by **re-running the exporter**; the `dataset_version` changes
+  accordingly. Figures are **deterministic** given the same public candles and engine version.
+
+## Not yet stamped
+
+:::warning parameters & engine_commit are null-until-stamped
+Two provenance fields are currently **`null`** in the dataset and on
+[`/v1/strategies/{id}`](/docs/api-reference/get-strategy):
+
+- **`parameters`** — the exact per-strategy indicator/rule parameters used in the backtest.
+- **`engine_commit`** — the git commit of the engine that produced the snapshot.
+
+They are placeholders pending a planned exporter enhancement to **stamp** them, so the
+reference is honest about machine-exact reproducibility today. The documented
+[fees & slippage](./fees-slippage) and the engine/source above are fixed and accurate; the
+**precise parameter values** are not yet published per-strategy.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Overview" href="/docs/methodology/overview">
+    The dataset and verification states in context.
+  </Card>
+  <Card title="API Reference" href="/docs/api-reference">
+    Pull metadata, stats, returns, curve and correlation directly.
+  </Card>
+</CardGroup>

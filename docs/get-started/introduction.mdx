@@ -1,0 +1,58 @@
+---
+title: Introduction
+description: What the Strategy Data API is, who it's for, and the data framing.
+sidebar_label: Introduction
+sidebar_position: 0
+---
+
+# Introduction
+
+The **BTC Alpha Strategy Data API** serves **backtested / modelled historical** performance
+data for a curated set of BTC trading strategies, over one clean **REST / JSON** interface, for
+**professional and institutional** use under a global license.
+
+:::warning Factual historical data — not advice
+Everything here is **factual historical data**: backtested/modelled results computed from public
+market data. **Past performance is not indicative of future results.** It is **not investment
+advice, not a recommendation, not a forecast, and not an offer.** See
+[Factual Data, Not Advice](/docs/legal/not-advice).
+:::
+
+## At a glance
+
+- **17 validated strategies** on **`BTC-PERPETUAL`** (Deribit; inverse, BTC-settled).
+- **~7.8 years** of history (2018-08 → 2026-06), daily and weekly.
+- Per-strategy **stats**, **returns**, **equity curve**, plus **cross-strategy correlation** and
+  a **book-level summary**.
+- **Modelled risk rescaling** via a single `risk_pct` parameter.
+- **Open access today** — no key required (a subscription gate is pre-wired for later).
+
+## Base URL
+
+```text
+https://btc-strategy-data-api.fly.dev
+```
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/get-started/quickstart">
+    Your first correlation matrix in three calls.
+  </Card>
+  <Card title="Access & Authentication" href="/docs/get-started/access">
+    The (open) access model and the future API-key seam.
+  </Card>
+  <Card title="Methodology" href="/docs/methodology/overview">
+    Exactly how every number is produced — checked against the data.
+  </Card>
+  <Card title="API Reference" href="/docs/api-reference">
+    All endpoints with schemas, examples and a live playground.
+  </Card>
+</CardGroup>
+
+## A note on what this is — and isn't
+
+This is a **data product**, not a financial product. It reports **what these strategies did** in
+a backtest over public history, with the methodology fully documented (including its
+[limitations](/docs/methodology/overview)). It does not tell you what to trade, and it makes no
+claim about future performance.

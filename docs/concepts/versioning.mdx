@@ -1,0 +1,60 @@
+---
+title: Versioning & Deprecation
+description: How the API evolves — additive within v1, breaking under a new version.
+sidebar_label: Versioning
+sidebar_position: 4
+---
+
+# Versioning & Deprecation
+
+**Current version: `v1` · stability: `stable`.**
+
+Data endpoints live under the **`/v1`** prefix. Infra endpoints (`/healthz`, `/readyz`,
+`/version`) are unversioned.
+
+## What ships within `v1` (non-breaking)
+
+- New endpoints.
+- New **optional** request parameters.
+- New fields added to `data`, `meta`, or `links`.
+- Bug fixes and performance changes that don't change documented semantics.
+
+**Clients must tolerate additive changes** — ignore unknown fields and you won't break on these.
+
+## What is breaking (→ a new version `/v2`)
+
+- Removing or renaming a field; changing a field's type or meaning.
+- Changing the **envelope** (`{ data, meta, links }`) or the error shape.
+- Removing an endpoint or changing its semantics.
+
+## Deprecation process
+
+When a version or endpoint is deprecated:
+
+- It is supported for **at least 90 days** after the announcement.
+- Deprecated responses carry **`Deprecation: true`**, a **`Sunset: <date>`** header, and a
+  `Link: <successor>; rel="successor-version"`.
+- The deprecation is listed in the [changelog](/docs/help/changelog).
+
+## Version signalling
+
+- **Every response** carries an **`X-API-Version: v1`** header.
+- **`GET /version`** returns `api_version`, `stability`, and the full `policy` text.
+- **`dataset_version`** (in every `meta`) identifies the underlying **data snapshot** and moves
+  **independently** of the API version — the API contract and the data it serves are versioned
+  separately. See [Provenance](/docs/methodology/provenance).
+
+:::note Two independent versions
+`api_version` (the contract: `v1`) and `dataset_version` (the data snapshot, e.g.
+`2026-06-24T07:40:35Z`) change for different reasons. Pin/track whichever matters to you —
+often you care about `dataset_version` for reproducibility and `api_version` for integration.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Response Envelope" href="/docs/concepts/envelope">
+    The shape these additive rules protect.
+  </Card>
+  <Card title="Changelog" href="/docs/help/changelog">
+    Where deprecations and dataset updates are recorded.
+  </Card>
+</CardGroup>

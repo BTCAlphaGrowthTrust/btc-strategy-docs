@@ -1,0 +1,57 @@
+---
+title: Access & Authentication
+description: The access model today (open), the API-key seam, and CORS.
+sidebar_label: Access & Authentication
+sidebar_position: 2
+---
+
+# Access & Authentication
+
+:::note Status today: open
+The API is currently **open** — **no key is required** and every request resolves as an
+anonymous client (`client_id: "anonymous"`, `plan: "open"`). The pieces below describe how
+keyed access will work when the subscription gate is enabled, so you can integrate now without
+rework.
+:::
+
+## The API-key seam (declared, not enforced)
+
+A per-client API key is **declared** as an optional security scheme — header **`X-API-Key`** —
+and appears in the OpenAPI spec and the reference playground. It is configured **`auto_error =
+false`**, meaning it is **documented but not required**: sending it is harmless today; omitting
+it is fine. When the gate is enabled, this same header becomes mandatory and missing/invalid
+keys will return [`401 unauthorized`](/docs/concepts/error-codes).
+
+The `/v1` router already carries the `require_client` dependency (currently a no-op resolving
+the anonymous client) and the `rate_limit` dependency ([Rate Limits](/docs/concepts/rate-limits)).
+Enabling access is a change at those seams only — **no endpoint or response-shape changes**.
+
+## CORS
+
+Browser access is restricted to an explicit **allowlist** (never `*`):
+
+```text
+https://btcalpha.com.au
+https://www.btcalpha.com.au
+https://docs.btcalpha.com.au          # this docs site (so the reference playground works)
+https://btc-strategy-docs-k5ju.vercel.app
+http://localhost:5173, :3000, :8100   # local development
+```
+
+Requests from an allowed `Origin` receive the matching `Access-Control-Allow-Origin`; others
+receive none. Server-to-server calls (no `Origin`) are unaffected. The methods are `GET` only.
+
+## Using the reference playground
+
+Because `docs.btcalpha.com.au` is allowlisted, the **"Send" button** in the
+[API Reference](/docs/api-reference) calls **production** directly from this site and returns
+live data — no key needed today.
+
+<CardGroup cols={2}>
+  <Card title="Rate Limits" href="/docs/concepts/rate-limits">
+    The companion (not-yet-enforced) throttling contract.
+  </Card>
+  <Card title="Quickstart" href="/docs/get-started/quickstart">
+    Make your first calls now — open, no key.
+  </Card>
+</CardGroup>

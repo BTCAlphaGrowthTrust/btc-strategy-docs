@@ -1,0 +1,79 @@
+---
+title: Methodology — Correlation & Diversification
+description: Pearson on aligned returns, risk-invariance, and the effective-bets heuristic.
+sidebar_label: Correlation & Diversification
+sidebar_position: 4
+---
+
+# Correlation & Diversification
+
+The correlation matrix tells a customer which strategies are **independent bets**. It is
+computed on the **return series**, not equity curves, and is exposed at
+[`GET /v1/correlation`](/docs/api-reference/get-correlation) (and inside
+[`/v1/export`](/docs/api-reference/get-export)).
+
+## Pearson on aligned returns
+
+For each pair of strategies, standard **Pearson correlation** of their period-over-period
+returns over the periods they **both** have:
+
+```text
+r(a,b) = Σ (aᵢ − ā)(bᵢ − b̄)  /  ( √Σ(aᵢ − ā)²  ·  √Σ(bᵢ − b̄)² )
+```
+
+- **Pairwise-complete (inner join):** correlation uses only the period labels present in
+  **both** series (`set(a) ∩ set(b)`), sorted.
+- Needs **≥ 2 overlapping periods**, else the cell is `null`.
+- Matrix is **symmetric** with a **1.0 diagonal**; values rounded to 6 dp. The API also returns
+  `n_overlap` — the number of shared periods behind each cell.
+- Available **`daily`** or **`weekly`** (`?period=`), and for a subset of strategies (`?ids=`).
+
+## Why returns, not equity curves
+
+:::warning Correlating equity curves is misleading
+Equity curves are **trending, non-stationary** series. Two strategies that both grow over years
+will show curve-correlation near **+1** regardless of whether their **bar-to-bar behaviour** is
+independent — the shared upward drift dominates. Correlating **returns** (the period-over-period
+changes) removes that drift and measures genuine **co-movement**, which is what determines
+diversification. This dataset always correlates returns.
+:::
+
+## Risk-invariance
+
+Pearson correlation is **invariant under positive linear scaling**: multiplying either return
+series by a constant (which is exactly what [`risk_pct`](./risk-rescale) does) leaves `r`
+unchanged. Therefore **correlation is identical at any risk level** — it is not affected by
+`risk_pct` and is returned the same in base and rescaled responses.
+
+## Effective bets
+
+[`GET /v1/summary`](/docs/api-reference/get-summary) reports a single-number diversification
+gauge from the **daily** matrix:
+
+```text
+mean_corr     = mean of the off-diagonal (i < j) non-null pairwise correlations
+effective_bets = n / ( 1 + (n − 1) · mean_corr )
+```
+
+Interpretation: how many **independent** strategies the book behaves like. It equals **n** when
+all strategies are uncorrelated (`mean_corr = 0`) and collapses toward **1** as they become
+perfectly correlated. For the current dataset: **n = 17**, `mean_corr ≈ 0.315` →
+**≈ 2.81 effective bets**.
+
+:::warning Effective-bets is a heuristic
+This formula depends **only on the mean** pairwise correlation. It ignores the **structure** of
+the correlation matrix (clusters, the eigenvalue spread, tail dependence). It is a quick,
+honest **gauge** of diversification — useful for comparison and a sanity check — **not** a
+portfolio-optimisation output or a substitute for the full matrix, which the API also provides.
+`summary` also reports the most- and least-correlated pairs so you can see the extremes behind
+the mean.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Performance Metrics" href="/docs/methodology/metrics">
+    The per-strategy statistics this complements.
+  </Card>
+  <Card title="Provenance" href="/docs/methodology/provenance">
+    Denomination, base risk, and why book_size = 1 here.
+  </Card>
+</CardGroup>

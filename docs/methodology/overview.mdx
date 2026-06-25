@@ -1,0 +1,77 @@
+---
+title: Methodology — Overview
+description: What the dataset is, how it is produced, and the factual-historical framing.
+sidebar_label: Overview
+sidebar_position: 1
+---
+
+# Methodology — Overview
+
+This section documents exactly how every number in the API is produced. It is written to be
+checked against the data: the formulas and conventions below are the ones the exporter and the
+API actually run, including their limitations.
+
+:::warning Factual historical data — not advice
+Every figure is **backtested / modelled historical** performance computed from public market
+data. **Past performance is not indicative of future results.** This is factual historical
+data for **professional / institutional** use under a global license — **not investment
+advice, not a recommendation, not a forecast, and not an offer.**
+:::
+
+## What the dataset is
+
+- **17 validated strategies**, all trading **`BTC-PERPETUAL`** on Deribit — an **inverse,
+  BTC-settled** contract (PnL and balances accrue in BTC; see [Provenance](./provenance)).
+- **Backtest window:** indicators warm up from **2018-08-14**; the published series run to the
+  dataset's generation date (currently **2026-06-24**) — about **7.8 years**, ~**2,871** daily
+  return points per strategy.
+- **Source:** **public Deribit chart history** (candles). The exporter is **keyless** — it
+  authenticates to nothing and reads no credentials.
+- **Execution timeframes:** 4H (11 strategies), 1H (3), 1D (2), 15m (1).
+- **Strategy families:** ribbon-squeeze (RSS), golden-cross (GX), stochastic oscillator (OSC),
+  and EMA-trend.
+- Each strategy is sized **per-strategy at its own base risk %** (`book_size = 1`) — this is a
+  single-strategy backtest, **independent of any live portfolio allocation**.
+
+## How a figure is produced
+
+For each strategy the exporter re-runs the engine's **keyless `DRY_RUN` backtest** bar-by-bar
+over the public candles, producing a mark-to-market **equity curve**. Everything else is
+derived from that curve and the trade list:
+
+- **Returns** — last equity per UTC day / ISO week, then period-over-period % change
+  ([Metrics](./metrics)).
+- **Stats** — CAGR, max drawdown, Sharpe, Sortino, time-underwater, win rate, profit factor
+  ([Metrics](./metrics)).
+- **Correlation** — Pearson on the aligned **return** series across strategies
+  ([Correlation](./correlation)).
+- Costs (commission + slippage) are applied **inside** the backtest, so all figures are net of
+  them ([Fees & Slippage](./fees-slippage)).
+
+## Verification states
+
+Only **validated** strategies are exported, in one of two states:
+
+| State | Count | Meaning |
+|---|---|---|
+| **`dual_verified`** | 12 | The engine backtest has been **reconciled against an independent TradingView reference implementation** — two independent implementations of the strategy agree within tolerance. |
+| **`engine_backtested`** | 5 | Validated by the engine's keyless backtest, **without** an external dual-reference reconciliation. |
+
+Both are real backtests over the same public candles and the same cost model; the distinction
+is **whether a second, independent implementation was cross-checked**. The state is published on
+every strategy (`verification_state`).
+
+<CardGroup cols={2}>
+  <Card title="Risk Rescale" href="/docs/methodology/risk-rescale">
+    How `risk_pct` linearly rescales returns — and why it's modelled, not re-backtested.
+  </Card>
+  <Card title="Performance Metrics" href="/docs/methodology/metrics">
+    Exact definitions: CAGR, drawdown, Sharpe, Sortino, time-underwater.
+  </Card>
+  <Card title="Correlation & Diversification" href="/docs/methodology/correlation">
+    Pearson on returns, risk-invariance, effective bets.
+  </Card>
+  <Card title="Data Provenance" href="/docs/methodology/provenance">
+    Source, engine, denomination, base risk, dataset versions.
+  </Card>
+</CardGroup>

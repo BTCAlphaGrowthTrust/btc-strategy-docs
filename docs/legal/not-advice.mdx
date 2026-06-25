@@ -1,0 +1,56 @@
+---
+title: Factual Data, Not Advice
+description: The nature of the data and the limits of its use.
+sidebar_label: Factual Data, Not Advice
+sidebar_position: 1
+---
+
+# Factual Data, Not Advice
+
+This page states plainly what the data **is** and what it is **not**. It applies to every
+endpoint, field and figure in this API, and is echoed in the `disclaimer` of every response
+`meta`.
+
+## What the data is
+
+- **Factual historical data.** It reports **what a set of strategies did** in a **backtest** run
+  over **public market data**.
+- **Backtested / modelled.** Figures come from a bar-by-bar simulation, net of a documented
+  [fee & slippage model](/docs/methodology/fees-slippage). Risk-rescaled figures are
+  [modelled from the base backtest](/docs/methodology/risk-rescale), not re-simulated.
+- **For professional / institutional use**, under a global data license
+  ([Licensing](./licensing)).
+
+## What the data is not
+
+:::warning Not advice
+- **Not investment advice** and **not a recommendation** to buy, sell, or hold anything.
+- **Not a forecast or prediction.** Nothing here projects future performance.
+- **Not an offer or solicitation**, and not a representation that any strategy is suitable for
+  you.
+- **Not a claim about live trading.** Backtested results are hypothetical; they do not reflect
+  live execution, funding, market impact, or a specific live allocation
+  ([Provenance](/docs/methodology/provenance)).
+:::
+
+## Past performance
+
+**Past performance is not indicative of future results.** Backtested performance has inherent
+limitations: it is constructed with hindsight, it does not involve financial risk, and no
+backtest can fully account for the effect of real market conditions on a live strategy.
+
+## Your responsibility
+
+Any decision you make is **your own**. You are responsible for your own due diligence, for
+complying with the laws and regulations applicable to you, and for determining whether any use
+of this data is appropriate for your circumstances. If you need advice, consult a qualified,
+appropriately licensed professional.
+
+<CardGroup cols={2}>
+  <Card title="Methodology" href="/docs/methodology/overview">
+    Exactly how the figures are produced, and their limitations.
+  </Card>
+  <Card title="Licensing" href="/docs/legal/licensing">
+    The data-license terms governing use of this data.
+  </Card>
+</CardGroup>

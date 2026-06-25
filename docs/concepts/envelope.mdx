@@ -1,0 +1,78 @@
+---
+title: Response Envelope
+description: The canonical { data, meta, links } success shape and the error shape.
+sidebar_label: Response Envelope
+sidebar_position: 1
+---
+
+# Response Envelope
+
+Every **success** response uses one canonical shape, and every **error** uses one shape. A
+client can rely on this everywhere — including the infra endpoints (`/healthz`, `/readyz`,
+`/version`).
+
+## Success — `{ data, meta, links }`
+
+```json
+{
+  "data": <the resource payload>,
+  "meta": {
+    "basis": "backtested",
+    "register": "factual_historical",
+    "audience": "professional_institutional",
+    "license": "global",
+    "dataset_version": "2026-06-24T07:40:35Z",
+    "generated_utc": "2026-06-24T07:40:35Z",
+    "timing_ms": 1.2,
+    "disclaimer": "Backtested/modelled historical … not advice, not a recommendation, not a forecast.",
+    "count": 17
+  },
+  "links": { "self": "/v1/strategies", "summary": "/v1/summary", "dataset": "/v1/dataset" }
+}
+```
+
+- **`data`** — the resource itself (a list, an object, or a series of points).
+- **`meta`** — always carries the **factual register** (`basis`, `register`, `audience`,
+  `license`, `disclaimer`), the **`dataset_version`** + **`generated_utc`** (the snapshot the
+  response was served from), and **`timing_ms`** (server processing time). Endpoints add their
+  own fields here (see below).
+- **`links`** — related resources (`self` plus relevant siblings), as relative paths.
+
+### Endpoint-specific `meta` fields
+
+| Field(s) | Appears on | Meaning |
+|---|---|---|
+| `count` | `/v1/strategies` | number of items in `data` |
+| `period` | returns, correlation, export | `daily` or `weekly` |
+| `risk_pct` | stats, returns | the risk level the figures are at |
+| `modelled`, `base_risk_pct`, `requested_risk_pct`, `effective_risk_pct`, `risk_pct_clamped` | stats/returns/curve/export when `risk_pct` is supplied | the [rescale](/docs/methodology/risk-rescale) provenance |
+| `time_underwater_footnote` | stats | the strict-below-peak note |
+| `note` | correlation, curve, export | a short methodology note |
+
+## Error — `{ error, meta }`
+
+```json
+{
+  "error": { "code": "not_found", "message": "unknown strategy 'nope'", "details": null },
+  "meta": { "...same register + dataset_version + timing_ms..." }
+}
+```
+
+The `meta` block is the same as on success. See [Error Codes](./error-codes) for the full code
+table and `details` semantics.
+
+## The one exception — CSV
+
+:::note
+`GET /v1/export?format=csv` returns a **raw CSV body**, not the envelope (a tabular export
+can't be wrapped in JSON). Every other response — JSON success and error alike — is enveloped.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Error Codes" href="/docs/concepts/error-codes">
+    The full error code table and the unified error shape.
+  </Card>
+  <Card title="Versioning" href="/docs/concepts/versioning">
+    How the envelope and fields evolve without breaking you.
+  </Card>
+</CardGroup>

@@ -1,0 +1,61 @@
+---
+title: Error Codes
+description: The unified error shape and the full code table.
+sidebar_label: Error Codes
+sidebar_position: 2
+---
+
+# Error Codes
+
+Every error — whether it comes from the service, request validation, routing, or an unexpected
+failure — converges to one shape:
+
+```json
+{
+  "error": { "code": "<string>", "message": "<human-readable>", "details": <any|null> },
+  "meta": { "...factual register, dataset_version, timing_ms..." }
+}
+```
+
+- **`code`** — a stable machine string (table below); switch on this, not the HTTP status.
+- **`message`** — a human-readable explanation.
+- **`details`** — usually `null`; for `validation_error` it carries the structured list of
+  field errors (which parameter, what was wrong).
+
+## Code table
+
+| HTTP | `code` | When |
+|---|---|---|
+| 404 | `not_found` | Unknown strategy id, or unknown route. |
+| 422 | `invalid_parameter` | A parameter failed a service check — bad `format`, malformed `from`/`to` date, `period` not in `{daily, weekly}`, unknown `ids`, non-positive `risk_pct`. |
+| 422 | `validation_error` | FastAPI request validation failed (e.g. wrong query type); `details` lists the offending fields. |
+| 405 | `method_not_allowed` | Wrong HTTP method on a valid path (the API is read-only — `GET` only). |
+| 503 | `service_unavailable` | `/readyz` integrity check failed (dataset not fully loaded). |
+| 500 | `internal_error` | Unexpected server error. **No internal detail is leaked** — `details` is `null`. |
+| 400 | `bad_request` | Malformed request. |
+| 403 | `forbidden` | Reserved. |
+
+## Reserved for the future access gate
+
+These are declared but **not emitted today** (the API is open and unthrottled — see
+[Access & Authentication](/docs/get-started/access) and [Rate Limits](./rate-limits)):
+
+| HTTP | `code` | Future meaning |
+|---|---|---|
+| 401 | `unauthorized` | Missing/invalid API key, once keys are required. |
+| 429 | `rate_limited` | Over a per-client rate limit; will arrive with `RateLimit-*` headers. |
+
+:::note
+Because the `code` is stable across versions, you can write error handling against it now —
+including the reserved `unauthorized` / `rate_limited` codes — and it will keep working when the
+access gate is enabled.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Response Envelope" href="/docs/concepts/envelope">
+    The success + error shapes in full.
+  </Card>
+  <Card title="Rate Limits" href="/docs/concepts/rate-limits">
+    The (not-yet-enforced) 429 contract.
+  </Card>
+</CardGroup>

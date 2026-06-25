@@ -1,0 +1,121 @@
+---
+title: Methodology — Performance Metrics
+description: Exact definitions and conventions for every published statistic.
+sidebar_label: Performance Metrics
+sidebar_position: 3
+---
+
+# Performance Metrics
+
+Every statistic below is computed by the exporter from the backtest's **mark-to-market equity
+curve** and the **trade list**, in pure stdlib (no pandas/numpy). All figures are
+**backtested / modelled historical** values in the strategy's settlement currency (**BTC**,
+inverse) at its **base risk %**. The exact conventions — including where they differ from
+textbook defaults — are documented here so they can be reproduced.
+
+The **return series** these use is the last mark-to-market equity per **UTC day** (or ISO
+week), then period-over-period percentage change. So "daily returns" are **calendar-daily**
+and include open-position marks, not just realised trade PnL.
+
+## Return & growth
+
+| Metric | Definition (as computed) |
+|---|---|
+| `net_return_pct` | `(final / initial − 1) × 100` on the equity marks. |
+| `cagr_pct` | `(final / initial)^(1/years) − 1`, ×100, where `years = (last_ts − first_ts) / (365.25 × 86400)`. `null` if `years ≤ 0` or non-positive equity. |
+
+```text
+CAGR = (final / initial) ^ (1 / years) − 1          # year length = 365.25 days
+```
+
+## Max drawdown
+
+Most-negative peak-to-trough excursion on the equity series, against the **running all-time
+peak**:
+
+```text
+maxDD = min_t ( equity(t) − peak(t) ) / peak(t) × 100        # peak(t) = max equity up to t
+```
+
+Reported as a negative percentage (e.g. `−33.3162`).
+
+## Sharpe (daily, annualized)
+
+```text
+Sharpe = mean(daily_ret) / stdev(daily_ret) × √365
+```
+
+- **`stdev` is the sample standard deviation** (divisor `n − 1`).
+- **Risk-free rate = 0** (no excess-return adjustment).
+- **Annualization factor `√365`** — calendar-daily, since the market trades every day. `null`
+  if there are no returns or zero variance.
+- A **weekly** Sharpe (`sharpe_weekly_annualized`) is the same formula on weekly returns with
+  `√52`.
+
+:::note Convention note
+CAGR uses a `365.25`-day year; Sharpe annualizes with `365`. This is a deliberate, minor
+convention difference (calendar-year length vs trading-days-per-year), not an error — both are
+documented here so your own re-computation matches.
+:::
+
+## Sortino (daily, annualized)
+
+```text
+downside_dev = √( Σ ret²  over ret < 0  /  count(ret < 0) )     # target (MAR) = 0
+Sortino      = mean(all daily_ret) / downside_dev × √365
+```
+
+- Downside deviation is measured against a **target of 0** (not the mean), and divides by the
+  **count of downside periods only** (not the total). Requires **≥ 2 downside periods**, else
+  `null`. This is a specific, common convention — stated explicitly so it reproduces.
+
+## Time underwater
+
+On the **daily** equity series, days **strictly below the prior all-time peak**:
+
+```text
+for each day:  if equity ≥ peak → new peak, reset run
+               else            → run += 1, total += 1, longest = max(longest, run)
+```
+
+Reports `{ longest_days, total_days }`.
+
+:::warning Read this before interpreting time-underwater
+"Strictly below the prior peak" means **every day that is not itself a new equity high counts
+as underwater** — even while the strategy is profitable and grinding upward in steps. So
+`total_days` can approach the **entire history length** for a strongly-performing strategy.
+
+Example — `atg_4h_ema`: **`total_days` ≈ 2,802 of ~2,871** days underwater, yet **net
+return ≈ +2,389%**. It measures **time-to-new-high (recovery cadence)**, **not** loss or
+time spent in loss. Do not read a large `total_days` as poor performance.
+:::
+
+## Trade-level
+
+| Metric | Definition |
+|---|---|
+| `trade_count` | Number of closed trades. |
+| `win_rate_pct` | `wins / trade_count × 100`, where a win is trade PnL `> 0`. |
+| `profit_factor` | `gross_profit / gross_loss` = `Σ(winning PnL) / |Σ(losing PnL)|`. `null` if there are no losing trades. |
+
+## Honest limitations
+
+:::warning Limitations
+- **No exposure / time-in-market metric is published.** The dataset does **not** include the
+  fraction of time a strategy holds a position. Sharpe/Sortino are on calendar-daily marks
+  regardless of whether the strategy was in or out of the market that day.
+- **Risk-free rate is 0** for Sharpe/Sortino — no cash/funding benchmark is subtracted.
+- Figures are **BTC-denominated** (inverse contract), not USD — see
+  [Provenance](./provenance).
+- All figures are at **base risk**; see [Risk Rescale](./risk-rescale) for `risk_pct`.
+- Values are rounded (net 3 dp; CAGR/maxDD/Sharpe/Sortino 4 dp; win-rate 2 dp; PF 3 dp).
+:::
+
+<CardGroup cols={2}>
+  <Card title="Correlation & Diversification" href="/docs/methodology/correlation">
+    How independence between strategies is measured.
+  </Card>
+  <Card title="Fees & Slippage" href="/docs/methodology/fees-slippage">
+    The cost assumptions baked into every figure above.
+  </Card>
+</CardGroup>

@@ -1,0 +1,58 @@
+---
+title: Methodology — Fees & Slippage
+description: The transaction-cost assumptions applied inside the backtest, and what is not modelled.
+sidebar_label: Fees & Slippage
+sidebar_position: 5
+---
+
+# Fees & Slippage
+
+Transaction costs are applied **inside** the keyless `DRY_RUN` backtest that produces every
+figure, so **all** published returns, curves and stats are **net of these costs**. The
+assumptions are fixed and documented here.
+
+## The assumptions (as applied)
+
+The backtest broker is configured with:
+
+| Cost | Value | How it's applied |
+|---|---|---|
+| **Commission** | **`0.0005` = 5 bps** | charged on **each fill** (entry and exit), on notional. |
+| **Slippage** | **`2.0` ticks** | every fill is moved **2 ticks adverse** of the bar price (a tick = the instrument's minimum price increment). |
+
+A round-trip therefore pays commission twice plus slippage on both fills. These are the same
+across all strategies and the whole window.
+
+:::note Net of costs
+Because costs are inside the simulation, you do **not** need to deduct anything yourself — the
+CAGR, drawdown, Sharpe, returns and curves already reflect 5 bps/fill commission and 2-tick
+slippage.
+:::
+
+## What is NOT modelled
+
+:::warning Honest cost caveats
+- **Perpetual funding is not modelled.** `BTC-PERPETUAL` charges/credits periodic funding;
+  the backtest does **not** include it. For a strategy that holds positions across many funding
+  intervals this is a real omission — net live results would differ by the accrued funding.
+- **Market impact / size is not modelled.** Slippage is a flat 2 ticks regardless of order
+  size; large orders that would move the book are **not** penalised beyond that.
+- **Slippage is fixed**, not volatility-dependent. In fast or thin markets, real fills can be
+  worse than 2 ticks; here they never are.
+- **Commission is a flat 5 bps**, not the venue's exact maker/taker fee schedule, rebates, or
+  fee tiers.
+- Fills occur at **bar** granularity (the backtest is bar-by-bar), not tick-by-tick.
+:::
+
+These assumptions are deliberately simple and **conservative-ish but not exhaustive**. Treat
+the figures as **net of an explicit, fixed cost model** — accurate within that model, and to be
+adjusted by a reader who wants to add funding or impact for their own venue and size.
+
+<CardGroup cols={2}>
+  <Card title="Provenance" href="/docs/methodology/provenance">
+    The engine, data source, denomination and base risk behind the backtest.
+  </Card>
+  <Card title="Performance Metrics" href="/docs/methodology/metrics">
+    The statistics these costs feed into.
+  </Card>
+</CardGroup>

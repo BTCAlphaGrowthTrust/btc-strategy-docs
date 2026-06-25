@@ -1,0 +1,41 @@
+---
+title: Changelog
+description: API and dataset version history.
+sidebar_label: Changelog
+sidebar_position: 2
+---
+
+# Changelog
+
+Records **API contract** changes and **dataset snapshot** updates. The two are versioned
+[independently](/docs/concepts/versioning): `api_version` (the contract) and `dataset_version`
+(the data snapshot, surfaced in every response `meta`).
+
+:::note Live source of truth
+The current versions are always available from the API itself:
+[`GET /version`](/docs/api-reference/version) (API + policy) and any response's
+`meta.dataset_version` (data snapshot).
+:::
+
+## API — `v1` · stable
+
+Initial public contract:
+
+- Canonical [`{ data, meta, links }`](/docs/concepts/envelope) envelope on every response;
+  unified [error shape](/docs/concepts/error-codes).
+- Endpoints: strategies (list / metadata / stats / returns / curve), correlation, export,
+  summary, dataset; infra `healthz` / `readyz` / `version`.
+- [Modelled risk rescale](/docs/methodology/risk-rescale) via `risk_pct`.
+- `Cache-Control` + weak `ETag` (keyed on `dataset_version`) → `304` revalidation; `gzip`;
+  security headers; explicit [CORS allowlist](/docs/get-started/access).
+- Access/rate-limit **seams declared but not enforced** (open access).
+
+## Dataset
+
+| `dataset_version` | Notes |
+|---|---|
+| `2026-06-24T07:40:35Z` | Initial snapshot — 17 validated strategies, window 2018-08-14 → 2026-06-24, daily + weekly returns, equity curves, stats, daily/weekly correlation matrices. |
+
+New snapshots are produced by re-running the exporter; the `dataset_version` advances and a row
+is added here. Deprecations (if any) will be recorded against the API version above with
+`Deprecation` / `Sunset` headers per the [versioning policy](/docs/concepts/versioning).
