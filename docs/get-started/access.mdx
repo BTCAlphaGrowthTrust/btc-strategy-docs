@@ -1,30 +1,79 @@
 ---
 title: Access & Authentication
-description: The access model today (open), the API-key seam, and CORS.
+description: Preview (open) vs full (keyed) access, the X-API-Key header, entitlements, and CORS.
 sidebar_label: Access & Authentication
 sidebar_position: 2
 ---
 
 # Access & Authentication
 
-:::note Status today: open
-The API is currently **open** — **no key is required** and every request resolves as an
-anonymous client (`client_id: "anonymous"`, `plan: "open"`). The pieces below describe how
-keyed access will work when the subscription gate is enabled, so you can integrate now without
-rework.
-:::
+The API has **two access levels**: an open **preview** (no key) and **full** access (per-client
+`X-API-Key`). The preview is the public marketing surface; full access returns deep, per-strategy
+and book-level data scoped to **what your plan entitles**.
 
-## The API-key seam (declared, not enforced)
+## Preview vs full
 
-A per-client API key is **declared** as an optional security scheme — header **`X-API-Key`** —
-and appears in the OpenAPI spec and the reference playground. It is configured **`auto_error =
-false`**, meaning it is **documented but not required**: sending it is harmless today; omitting
-it is fine. When the gate is enabled, this same header becomes mandatory and missing/invalid
-keys will return [`401 unauthorized`](/docs/concepts/error-codes).
+| Endpoint | Preview (no key) | Full (keyed, entitled) |
+|---|---|---|
+| `GET /v1/strategies` (catalogue + headline stats) | ✅ open | ✅ |
+| `GET /v1/strategies/{id}` (metadata, provenance) | ✅ open | ✅ |
+| `GET /v1/correlation` (cross-strategy matrix) | ✅ open | ✅ |
+| `GET /v1/summary` | ⚠️ diversification only (`equal_weight_book: null`, `book_level_gated: true`) | ✅ full incl. `equal_weight_book` |
+| `GET /v1/strategies/{id}/stats` · `/returns` · `/curve` (full series) | ❌ `403` | ✅ if `{id}` is in your plan |
+| `GET /v1/export` (aligned returns matrix) | ❌ `403` | ✅ Full-catalogue tier only |
 
-The `/v1` router already carries the `require_client` dependency (currently a no-op resolving
-the anonymous client) and the `rate_limit` dependency ([Rate Limits](/docs/concepts/rate-limits)).
-Enabling access is a change at those seams only — **no endpoint or response-shape changes**.
+Anonymous callers always get the **catalogue, correlation matrix and headline stats** — enough to
+evaluate the product. The full series, the aligned `export`, and book-level performance require a key.
+
+## Sending your key
+
+Send the key in the **`X-API-Key` request header** — **never** in the query string or URL
+(URLs leak into logs, history and referrers). One header on every request:
+
+```bash
+curl https://btc-strategy-data-api.fly.dev/v1/strategies/helios/stats \
+  -H "X-API-Key: btca_live_xxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+```ts
+const res = await fetch(
+  "https://btc-strategy-data-api.fly.dev/v1/export?period=daily",
+  { headers: { "X-API-Key": process.env.STRATEGY_API_KEY! } },  // server-side only
+);
+```
+
+Use the key **server-side only** (a backend, a build step, a serverless function). Never ship it
+to a browser or commit it to source control.
+
+## Entitlements
+
+Your key returns **only what you bought**, by tier:
+
+- **Single** — one strategy's full data.
+- **Bundle** — a curated set (e.g. the Diversifier / Flagship / Steady bundles).
+- **Full catalogue** — every strategy **plus** book-level aggregates (`export`, full `summary`).
+
+Requesting a strategy your plan does not include returns [`403 forbidden`](/docs/concepts/error-codes)
+with a clear message — the catalogue itself stays visible (via the preview) so you can see what to add.
+
+## Response codes
+
+| Code | Meaning |
+|---|---|
+| [`401 unauthorized`](/docs/concepts/error-codes) | Missing **or invalid/revoked** key on a keyed request. |
+| [`403 forbidden`](/docs/concepts/error-codes) | Valid key, but the strategy or feature is **not in your plan**. |
+| [`429 rate_limited`](/docs/concepts/rate-limits) | Over your plan's rate limit *(reserved; not enforced yet)*. |
+
+Every error uses the unified [`{ error, meta }`](/docs/concepts/envelope) envelope.
+
+## Key handling
+
+- Treat the key like a password — **secret, server-side, never in URLs or client bundles**.
+- **Rotation:** request a new key; both work during a short overlap, then the old one is revoked.
+- **Compromise:** tell us and we revoke immediately (a revoked key returns `401`).
+- Caching: keyed responses are returned `Cache-Control: private, no-store` — do not share them across clients.
+
+Need a key? [Request access](https://btcalpha.com.au/access).
 
 ## CORS
 
@@ -44,14 +93,14 @@ receive none. Server-to-server calls (no `Origin`) are unaffected. The methods a
 ## Using the reference playground
 
 Because `docs.btcalpha.com.au` is allowlisted, the **"Send" button** in the
-[API Reference](/docs/api-reference) calls **production** directly from this site and returns
-live data — no key needed today.
+[API Reference](/docs/api-reference) calls **production** directly. **Preview** endpoints work with
+no key; **keyed** endpoints need your `X-API-Key` supplied in the playground's auth field.
 
 <CardGroup cols={2}>
   <Card title="Rate Limits" href="/docs/concepts/rate-limits">
-    The companion (not-yet-enforced) throttling contract.
+    The companion (reserved) per-tier throttling contract.
   </Card>
   <Card title="Quickstart" href="/docs/get-started/quickstart">
-    Make your first calls now — open, no key.
+    Make your first preview calls now — open, no key.
   </Card>
 </CardGroup>

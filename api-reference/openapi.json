@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "BTC Strategy Data API",
-    "description": "Read-only **backtested / modelled historical** performance data for a set of BTC trading strategies, for **professional / institutional** use under a global license.\n\nPast performance is not indicative of future results \u2014 factual historical data, **not investment advice, not a recommendation, not a forecast.**\n\n**Envelope:** every success is `{ data, meta, links }`; every error is `{ error: {code, message, details}, meta }`. `meta` carries the factual register, `dataset_version`, `generated_utc`, and `timing_ms`.\n\n**Risk rescale:** `risk_pct` linearly rescales returns (`ret' = ret \u00d7 risk/base_risk`); curve recompounded and CAGR/max-drawdown recomputed. Sharpe, Sortino and correlation are scale-invariant. `risk_pct` is clamped to `max_modelled_risk_pct`.\n\n**Versioning:** Endpoints are versioned under /v1. Additive, backward-compatible changes ship within v1. Breaking changes ship under /v2; the prior version is supported for at least 90 days with `Deprecation` and `Sunset` response headers. Field removals/renames and any envelope change are considered breaking.\n\n**Access:** open today; `X-API-Key` is reserved for a future subscription gate (not enforced). **Rate limits:** none today; future over-limit \u2192 HTTP 429 + `RateLimit-*`.",
+    "description": "Read-only **backtested / modelled historical** performance data for a set of BTC trading strategies, for **professional / institutional** use under a global license.\n\nPast performance is not indicative of future results \u2014 factual historical data, **not investment advice, not a recommendation, not a forecast.**\n\n**Envelope:** every success is `{ data, meta, links }`; every error is `{ error: {code, message, details}, meta }`. `meta` carries the factual register, `dataset_version`, `generated_utc`, and `timing_ms`.\n\n**Risk rescale:** `risk_pct` linearly rescales returns (`ret' = ret \u00d7 risk/base_risk`); curve recompounded and CAGR/max-drawdown recomputed. Sharpe, Sortino and correlation are scale-invariant. `risk_pct` is clamped to `max_modelled_risk_pct`.\n\n**Versioning:** Endpoints are versioned under /v1. Additive, backward-compatible changes ship within v1. Breaking changes ship under /v2; the prior version is supported for at least 90 days with `Deprecation` and `Sunset` response headers. Field removals/renames and any envelope change are considered breaking.\n\n**Access:** the catalogue, correlation matrix and headline stats are **open (preview)**. Per-strategy full series (`stats`/`returns`/`curve`), `export`, and book-level `summary` require an `X-API-Key` and return only what your plan entitles. Missing/invalid key \u2192 `401`; valid key without entitlement \u2192 `403`. **Rate limits:** none today; future over-limit \u2192 HTTP 429 + `RateLimit-*`. See the Authentication guide in the docs.",
     "contact": {
       "name": "BTC Alpha",
       "url": "https://btcalpha.com.au/"
@@ -500,7 +500,7 @@
           "aggregate"
         ],
         "summary": "Aligned returns matrix + correlation (json|csv)",
-        "description": "Aligned periodic returns across all strategies plus the correlation matrix. `risk_pct` modelled-rescales returns per strategy (correlation unchanged). CSV is a raw table (not enveloped).",
+        "description": "Aligned periodic returns across all strategies plus the correlation matrix. `risk_pct` modelled-rescales returns per strategy (correlation unchanged). CSV is a raw table (not enveloped). **Full-catalogue tier (book-level) only.**",
         "operationId": "getExport",
         "security": [
           {
@@ -643,6 +643,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
           }
         }
       }
@@ -887,6 +907,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
           }
         }
       }
@@ -1053,6 +1093,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
           }
         }
       }
@@ -1170,6 +1230,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
           }
         }
       }
