@@ -29,12 +29,33 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: 'docs',
+          docItemComponent: '@theme/ApiItem', // render API pages with the OpenAPI theme
         },
         blog: false, // data API docs — no blog
         theme: {customCss: './src/css/custom.css'},
       } satisfies Preset.Options,
     ],
   ],
+
+  plugins: [
+    [
+      'docusaurus-plugin-openapi-docs',
+      {
+        id: 'openapi',
+        docsPluginId: 'classic',
+        config: {
+          strategyApi: {
+            specPath: 'api-reference/openapi.json', // checked-in sample (CI will refresh later)
+            outputDir: 'docs/api-reference', // generated (gitignored)
+            downloadUrl: 'https://btc-strategy-data-api.fly.dev/openapi.json',
+            sidebarOptions: {groupPathsBy: 'tag', categoryLinkSource: 'tag'},
+            hideSendButton: false, // keep the interactive "Send" (hits production server)
+          },
+        },
+      },
+    ],
+  ],
+  themes: ['docusaurus-theme-openapi-docs'],
 
   themeConfig: {
     image: 'img/og-cover.svg', // placeholder — replace with branded 1200x630 PNG
