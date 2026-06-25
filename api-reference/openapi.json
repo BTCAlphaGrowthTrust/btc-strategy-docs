@@ -29,6 +29,7 @@
           "infra"
         ],
         "summary": "Liveness + dataset summary",
+        "description": "Liveness check for monitoring \u2014 is the service up, and how many strategies are loaded.",
         "operationId": "healthz",
         "responses": {
           "200": {
@@ -67,6 +68,7 @@
           "infra"
         ],
         "summary": "Readiness (dataset integrity)",
+        "description": "Readiness gate for deploys/integration \u2014 confirms the dataset loaded and passes its integrity checks before you depend on it.",
         "operationId": "readyz",
         "responses": {
           "200": {
@@ -120,6 +122,7 @@
           "infra"
         ],
         "summary": "API + dataset version",
+        "description": "Pin the dataset_version you analysed for reproducibility \u2014 plus the API version, stability and the modelled-risk cap.",
         "operationId": "version",
         "responses": {
           "200": {

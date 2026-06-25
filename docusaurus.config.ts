@@ -97,6 +97,7 @@ const config: Config = {
         },
       ],
       copyright:
+        'BTC Alpha is operated by ISI Australia Pty Ltd · ABN 27 652 105 345. ' +
         'Backtested / modelled historical data for professional & institutional use. ' +
         'Past performance is not indicative of future results — not advice, not a recommendation, not a forecast.',
     },
