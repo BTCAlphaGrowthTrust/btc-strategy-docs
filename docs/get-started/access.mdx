@@ -60,6 +60,30 @@ trade (`base_risk_pct ÷ stop-distance`). You execute on your own venue at your 
 book and cap leverage at your discretion.** Backtested / modelled, provisional — not advice.
 :::
 
+### Sizing a position from a signal
+
+Each signal gives you the **inputs** to size by **risk** — you compute the size to **your** capital. We do
+**not** prescribe an absolute size (that would assume your capital and be advice-like).
+
+```text
+position_size = (your_capital × base_risk_pct) ÷ | signal_price − stop |
+
+   equivalently:  position_notional = your_capital × implied_leverage
+```
+
+**Worked example** — a long signal: `signal_price = 64,000`, `stop = 61,000`, `base_risk_pct = 0.025`,
+`implied_leverage = 0.53`. You deploy **$1,000,000**:
+
+```text
+risk budget      = 1,000,000 × 0.025            = $25,000   (what you risk if stopped)
+stop distance    = |64,000 − 61,000| ÷ 64,000   = 4.69%
+position notional= 25,000 ÷ 0.0469              ≈ $533,000   (= 1,000,000 × 0.53 implied_leverage)
+```
+
+So you'd open ~**$533k** of BTC-PERPETUAL — about **0.53×** your deployed capital on this (wide-stop) trade.
+On a **tight-stop** trade the same risk budget produces a much larger, more **leveraged** position (see the
+warning above). `signal_price` is a **reference**, not a guaranteed fill — work in around it on your venue.
+
 ## Response codes
 
 | Code | Meaning |
