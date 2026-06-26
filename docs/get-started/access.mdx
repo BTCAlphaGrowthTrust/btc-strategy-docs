@@ -52,6 +52,15 @@ curl https://btc-signal-distribution.fly.dev/v1/signals/latest \
 Live signals are **request-based** today — [contact for access](/docs/help/contact). (There's a
 commercial/compliance gate before signals are sold; no public pricing yet.)
 
+### How signals are priced
+
+Live-signal pricing is **value-based and capacity-aware**, not a flat fee. Each strategy is priced on its
+**deployable capacity** (finite — bounded by real market liquidity and how it deploys) and its
+**conservative, risk-adjusted expected value** (tapered, haircut, provisional pending verification). You pay
+a **fair fraction** of the value the edge generates — the **majority stays with you**. Capacity is **capped
+per strategy** to keep the edge sharp for subscribers (protection, not restriction). **Verify the full record
+free, no key**, before subscribing. Pricing is **bespoke — request-based.**
+
 :::warning Leverage — signals imply leveraged positions
 Following a signal at its `base_risk_pct` implies a **leveraged** position, **not a 1:1 deployment**.
 Each strategy publishes **`leverage_typical`** (~1×) and **`leverage_max`** (historically **up to ~15×**
