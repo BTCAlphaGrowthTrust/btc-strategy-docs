@@ -13,7 +13,7 @@ historical data — not advice, not a recommendation, not a forecast.
 
 ## Try it in 60 seconds — no key
 
-The catalogue, correlation matrix and headline stats are **open** (preview tier — no key):
+Every historical endpoint is **open** — free, no key. Here's the catalogue:
 
 ```bash
 curl https://btc-strategy-data-api.fly.dev/v1/strategies
@@ -40,10 +40,10 @@ curl https://btc-strategy-data-api.fly.dev/v1/strategies
 }
 ```
 
-Real backtested track records, instantly — before you sign up. Each strategy carries **two
-confidence signals**: `verification_state` (internal validation depth — `dual_verified` here) and
-`tv_status` (external TradingView cross-check — `provisional` until reconciled),
-[explained here](/docs/concepts/verification). ([what's open vs gated ↓](#preview-vs-full))
+Real backtested track records, instantly — free, no key. Each strategy carries **two confidence
+signals**: `verification_state` (internal validation depth — `dual_verified` here) and `tv_status`
+(external TradingView cross-check — `provisional` until reconciled),
+[explained here](/docs/concepts/verification).
 
 ## Why a quant cares
 
@@ -63,10 +63,10 @@ Here's that question, answered as 20 lines of Python.
 # it in does to your Sharpe.   pip install requests numpy
 import csv, requests, numpy as np
 
-API, KEY, STRAT = "https://btc-strategy-data-api.fly.dev", "btca_live_...", "helios"
+API, STRAT = "https://btc-strategy-data-api.fly.dev", "helios"   # free — no key
 
 r = requests.get(f"{API}/v1/strategies/{STRAT}/returns",
-                 params={"period": "daily"}, headers={"X-API-Key": KEY})
+                 params={"period": "daily"})
 r.raise_for_status()
 strat = {p["t"]: p["ret"] for p in r.json()["data"]}
 
@@ -105,40 +105,44 @@ The takeaway you'd reason about: a near-zero correlation means the strategy is a
 return stream, so a modest sleeve can lift a book's risk-adjusted return through diversification —
 *if it holds for your book*. That's the point: **run it on your data.**
 
-→ **[Full runnable recipe](/docs/recipes/evaluate-vs-your-book)** — including a **no-key taste** you can
-run right now (uses the open correlation matrix), the CSV loader, and how to size the sleeve.
+→ **[Full runnable recipe](/docs/recipes/evaluate-vs-your-book)** — the full series (free, no key),
+the CSV loader, and how to size the sleeve.
 
-## Preview vs Full
+## All historical data is free
 
-Taste before you buy. The funnel is open; the per-strategy series and the aligned matrix are the paid product.
+Every endpoint is open — verify everything against your own model before you commit. The **live
+signals** are the paid product (separate keyed API).
 
-| Endpoint | Preview — **try now, no key** | Full — keyed |
-|---|---|---|
-| `GET /v1/strategies` · `/v1/strategies/{id}` | ✅ catalogue + headline + metadata | ✅ |
-| `GET /v1/correlation` | ✅ cross-strategy matrix | ✅ |
-| `GET /v1/summary` | ⚠️ diversification snapshot only | ✅ + equal-weight book |
-| `GET /v1/strategies/{id}/stats · /returns · /curve` | ❌ `403` | ✅ full series |
-| `GET /v1/export` (aligned returns matrix) | ❌ `403` | ✅ Full-catalogue tier |
+| Endpoint | Access |
+|---|---|
+| `GET /v1/strategies` · `/v1/strategies/{id}` (catalogue, metadata) | ✅ free |
+| `GET /v1/correlation` (cross-strategy matrix) | ✅ free |
+| `GET /v1/summary` (incl. equal-weight book) | ✅ free |
+| `GET /v1/strategies/{id}/stats · /returns · /curve` | ✅ free |
+| `GET /v1/export` (aligned returns matrix) | ✅ free |
 
-Try these **right now**, no key:
+Try any of them **right now**, no key:
 ```bash
 curl "https://btc-strategy-data-api.fly.dev/v1/correlation?period=daily"
 curl "https://btc-strategy-data-api.fly.dev/v1/summary"
 ```
 
-## Get the full data
+## Subscribe for the live signals
 
-1. **Request a key** at **[btcalpha.com.au/access](https://btcalpha.com.au/access)** — Single (one
-   strategy), Bundle (a set), or Full (all 14 + book-level + `/export`).
-2. Send it as the **`X-API-Key`** header — see **[Access & Authentication](/docs/get-started/access)**.
-3. Run the [recipe](/docs/recipes/evaluate-vs-your-book) against your own book.
+The historical data above is **free** — verify everything first. When you want to **act** on these
+strategies in real time, the product is the **live signals**: actionable trade signals as each
+strategy fires (`is_test: false`), via a separate keyed API.
+
+1. **Evaluate free** — run the [recipe](/docs/recipes/evaluate-vs-your-book) against your own book.
+2. **Subscribe** — live signals are request-based today: **[contact for access](/docs/help/contact)**.
+3. Send your signals key as the **`X-API-Key`** header — see **[Access & Authentication](/docs/get-started/access)**.
 
 <CardGroup cols={2}>
   <Card title="The recipe" href="/docs/recipes/evaluate-vs-your-book">
     Evaluate a strategy (or a bundle) against your portfolio — runnable Python.
   </Card>
   <Card title="Access & Authentication" href="/docs/get-started/access">
-    Preview vs full, the X-API-Key header, 401/403 meaning.
+    Free historical data vs the keyed live-signals API.
   </Card>
   <Card title="API Reference" href="/docs/api-reference">
     Every endpoint with schemas, examples and a live playground.

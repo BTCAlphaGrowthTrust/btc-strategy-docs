@@ -6,8 +6,8 @@ sidebar_position: 1
 
 # Quickstart
 
-Your first cross-strategy correlation in **three calls**, **no key** — these are the open
-**preview** tier. New here? Start with **[Start here](/docs/get-started/start-here)** (try-it +
+Your first cross-strategy correlation in **three calls**, **no key** — all historical data is free.
+New here? Start with **[Start here](/docs/get-started/start-here)** (try-it +
 the evaluate-against-your-book recipe). Base URL: `https://btc-strategy-data-api.fly.dev`.
 
 :::note Factual data, not advice
@@ -69,8 +69,8 @@ that spread, from tightly-correlated to *negatively*-correlated, is the raw mate
 curl https://btc-strategy-data-api.fly.dev/v1/summary
 ```
 
-Preview returns the **diversification snapshot** — mean correlation and effective bets. The
-equal-weight **book performance** is full-tier (keyed); preview returns it as `null`:
+The summary returns the **diversification snapshot** — mean correlation, effective bets — **and** the
+equal-weight **book performance**. All free, no key:
 
 ```json
 {
@@ -83,8 +83,10 @@ equal-weight **book performance** is full-tier (keyed); preview returns it as `n
       "least_correlated": { "pair": ["helios", "kronos"],  "correlation": -0.094 },
       "effective_bets": 2.51
     },
-    "equal_weight_book": null,
-    "book_level_gated": true
+    "equal_weight_book": {
+      "n_days": 2872, "net_return_pct": 452.11, "cagr_pct": 24.28,
+      "max_drawdown_pct": -18.89, "sharpe_daily_annualized": 1.63
+    }
   }
 }
 ```
@@ -92,7 +94,7 @@ equal-weight **book performance** is full-tier (keyed); preview returns it as `n
 **What to notice:** the least-correlated pair — **helios / kronos** — sits at **−0.09**, a genuinely
 independent, even mildly *hedging*, return stream. Over ~**8 years** (2018 → 2026) the 14 strategies
 behave like just **2.5 independent bets** (`effective_bets`) at a mean correlation of **0.35**.
-That's the diversification you're buying. *(Backtested / modelled, provisional — not advice.)*
+That's the diversification — free to verify against your own book. *(Backtested / modelled, provisional — not advice.)*
 
 → Unlock the book stats + the full per-strategy series with a key:
 [Access & Authentication](/docs/get-started/access).

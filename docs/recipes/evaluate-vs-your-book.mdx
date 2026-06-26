@@ -24,7 +24,7 @@ How independent are the 14 strategies from each other? One open call:
 ```python
 import requests
 API = "https://btc-strategy-data-api.fly.dev"
-s = requests.get(f"{API}/v1/summary").json()["data"]          # preview tier — no key
+s = requests.get(f"{API}/v1/summary").json()["data"]          # free — no key
 lc = s["diversification"]["least_correlated"]
 print(f"{s['strategy_count']} strategies, mean pairwise correlation {s['mean_pairwise_correlation']:.2f}")
 print(f"-> behave like {s['diversification']['effective_bets']:.1f} independent bets")
@@ -40,22 +40,21 @@ least-correlated pair: helios/kronos at -0.09
 just a diversifier. Low mutual correlation is the raw material; the step that matters is how a
 strategy sits against **your** book — that's the recipe below. *(Backtested/modelled, provisional — not advice.)*
 
-## The full recipe — vs your book (keyed)
+## The full recipe — vs your book (free, no key)
 
-Pull a strategy's full daily return series (gated — your key unlocks it), align it with your own
-daily returns, and see the correlation and the effect on your Sharpe.
+Pull a strategy's full daily return series (**free — no key**), align it with your own daily
+returns, and see the correlation and the effect on your Sharpe.
 
 ```python
 # pip install requests numpy
 import csv, requests, numpy as np
 
 API   = "https://btc-strategy-data-api.fly.dev"
-KEY   = "btca_live_..."          # your subscription key — request one at btcalpha.com.au/access
 STRAT = "helios"                 # any slug from GET /v1/strategies
 
-# 1 — the strategy's full daily return series (gated; your key unlocks it)
+# 1 — the strategy's full daily return series (free — no key)
 r = requests.get(f"{API}/v1/strategies/{STRAT}/returns",
-                 params={"period": "daily"}, headers={"X-API-Key": KEY})
+                 params={"period": "daily"})
 r.raise_for_status()
 strat = {p["t"]: p["ret"] for p in r.json()["data"]}
 
@@ -112,10 +111,14 @@ loader for your dataframe.
 - **Whole bundle, not one strategy.** Loop the call over several slugs (e.g. a bundle's members) and
   blend the equal-weight sleeve into your book.
 - **Best sleeve size.** Sweep `w` on a finer grid and pick the weight that maximises `sharpe`.
-- **Pick the least-correlated first.** Use the open `GET /v1/correlation` (no key) to rank strategies
-  by how independent they are before you subscribe.
+- **Pick the least-correlated first.** Use `GET /v1/correlation` (free, no key) to rank strategies
+  by how independent they are.
 
-## Get a key
+## Verified it? Subscribe for the live signals
 
-Request access at **[btcalpha.com.au/access](https://btcalpha.com.au/access)** (Single / Bundle /
-Full), then send it as the **`X-API-Key`** header — see **[Access & Authentication](/docs/get-started/access)**.
+Everything above is **free** — verify every track record against your own book before you commit to
+anything. When you want to **act** on these strategies in real time, the product is the **live
+signals**: actionable trade signals as each strategy fires (`is_test: false`), delivered by the
+keyed [signals API](/docs/get-started/access#live-signals--the-subscription-keyed).
+
+Live signals are request-based today — **[contact for access](/docs/help/contact)**.

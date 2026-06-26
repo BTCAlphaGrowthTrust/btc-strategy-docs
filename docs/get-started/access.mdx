@@ -1,79 +1,66 @@
 ---
 title: Access & Authentication
-description: Preview (open) vs full (keyed) access, the X-API-Key header, entitlements, and CORS.
+description: All historical data is free (no key). The live signals API is the keyed, subscription product.
 sidebar_label: Access & Authentication
 sidebar_position: 2
 ---
 
 # Access & Authentication
 
-The API has **two access levels**: an open **preview** (no key) and **full** access (per-client
-`X-API-Key`). The preview is the public marketing surface; full access returns deep, per-strategy
-and book-level data scoped to **what your plan entitles**.
+**All historical data is free — no key, no sign-up.** The full catalogue, every strategy's
+`stats` / `returns` / `curve`, the aligned `export` matrix, and book-level `summary` are open so you
+can verify every track record against your own model *before* you commit to anything. Aliases only —
+the strategy **mechanism stays sealed**.
 
-## Preview vs full
+**The live signals are the product.** Real-time, actionable trade signals are served by a separate,
+**keyed** API — that's what you subscribe for.
 
-| Endpoint | Preview (no key) | Full (keyed, entitled) |
-|---|---|---|
-| `GET /v1/strategies` (catalogue + headline stats) | ✅ open | ✅ |
-| `GET /v1/strategies/{id}` (metadata, provenance) | ✅ open | ✅ |
-| `GET /v1/correlation` (cross-strategy matrix) | ✅ open | ✅ |
-| `GET /v1/summary` | ⚠️ diversification only (`equal_weight_book: null`, `book_level_gated: true`) | ✅ full incl. `equal_weight_book` |
-| `GET /v1/strategies/{id}/stats` · `/returns` · `/curve` (full series) | ❌ `403` | ✅ if `{id}` is in your plan |
-| `GET /v1/export` (aligned returns matrix) | ❌ `403` | ✅ Full-catalogue tier only |
+## Historical data — open, no key
 
-Anonymous callers always get the **catalogue, correlation matrix and headline stats** — enough to
-evaluate the product. The full series, the aligned `export`, and book-level performance require a key.
+| Endpoint | Access |
+|---|---|
+| `GET /v1/strategies` (catalogue + headline stats) | ✅ free |
+| `GET /v1/strategies/{id}` (metadata, provenance) | ✅ free |
+| `GET /v1/correlation` (cross-strategy matrix) | ✅ free |
+| `GET /v1/summary` (incl. `equal_weight_book`) | ✅ free |
+| `GET /v1/strategies/{id}/stats` · `/returns` · `/curve` | ✅ free |
+| `GET /v1/export` (aligned returns matrix) | ✅ free |
 
-## Sending your key
-
-Send the key in the **`X-API-Key` request header** — **never** in the query string or URL
-(URLs leak into logs, history and referrers). One header on every request:
+Just call them — no header required:
 
 ```bash
-curl https://btc-strategy-data-api.fly.dev/v1/strategies/helios/stats \
+curl https://btc-strategy-data-api.fly.dev/v1/strategies/helios/stats
+curl "https://btc-strategy-data-api.fly.dev/v1/export?period=daily"
+```
+
+That's the whole point: pull every series, drop it into your optimiser, reconcile it against your
+own book — for free. The [evaluate-against-your-book recipe](/docs/recipes/evaluate-vs-your-book)
+walks the full flow.
+
+## Live signals — the subscription (keyed)
+
+The **live signals API** is the product. It delivers actionable signals as your strategies fire
+(`mode: "LIVE"`, `is_test: false`), gated by a per-client **`X-API-Key`** scoped to what you
+subscribe to. Send the key in the **`X-API-Key` header** — server-side only, never in a URL or a
+browser bundle:
+
+```bash
+curl https://btc-signal-distribution.fly.dev/v1/signals/latest \
   -H "X-API-Key: btca_live_xxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-```ts
-const res = await fetch(
-  "https://btc-strategy-data-api.fly.dev/v1/export?period=daily",
-  { headers: { "X-API-Key": process.env.STRATEGY_API_KEY! } },  // server-side only
-);
-```
-
-Use the key **server-side only** (a backend, a build step, a serverless function). Never ship it
-to a browser or commit it to source control.
-
-## Entitlements
-
-Your key returns **only what you bought**, by tier:
-
-- **Single** — one strategy's full data.
-- **Bundle** — a curated set (e.g. the Diversifier / Flagship / Steady bundles).
-- **Full catalogue** — every strategy **plus** book-level aggregates (`export`, full `summary`).
-
-Requesting a strategy your plan does not include returns [`403 forbidden`](/docs/concepts/error-codes)
-with a clear message — the catalogue itself stays visible (via the preview) so you can see what to add.
+Live signals are **request-based** today — [contact for access](/docs/help/contact). (There's a
+commercial/compliance gate before signals are sold; no public pricing yet.)
 
 ## Response codes
 
 | Code | Meaning |
 |---|---|
-| [`401 unauthorized`](/docs/concepts/error-codes) | Missing **or invalid/revoked** key on a keyed request. |
-| [`403 forbidden`](/docs/concepts/error-codes) | Valid key, but the strategy or feature is **not in your plan**. |
-| [`429 rate_limited`](/docs/concepts/rate-limits) | Over your plan's rate limit *(reserved; not enforced yet)*. |
+| `200` | Historical data — always, no key. |
+| [`401 unauthorized`](/docs/concepts/error-codes) | **Signals API** only: missing or invalid/revoked key. Historical endpoints never need a key. |
+| [`429 rate_limited`](/docs/concepts/rate-limits) | Reserved; not enforced yet. |
 
 Every error uses the unified [`{ error, meta }`](/docs/concepts/envelope) envelope.
-
-## Key handling
-
-- Treat the key like a password — **secret, server-side, never in URLs or client bundles**.
-- **Rotation:** request a new key; both work during a short overlap, then the old one is revoked.
-- **Compromise:** tell us and we revoke immediately (a revoked key returns `401`).
-- Caching: keyed responses are returned `Cache-Control: private, no-store` — do not share them across clients.
-
-Need a key? [Request access](https://btcalpha.com.au/access).
 
 ## CORS
 
@@ -83,24 +70,23 @@ Browser access is restricted to an explicit **allowlist** (never `*`):
 https://btcalpha.com.au
 https://www.btcalpha.com.au
 https://docs.btcalpha.com.au          # this docs site (so the reference playground works)
-https://btc-strategy-docs-k5ju.vercel.app
 http://localhost:5173, :3000, :8100   # local development
 ```
 
-Requests from an allowed `Origin` receive the matching `Access-Control-Allow-Origin`; others
-receive none. Server-to-server calls (no `Origin`) are unaffected. The methods are `GET` only.
+Requests from an allowed `Origin` receive the matching `Access-Control-Allow-Origin`; others receive
+none. Server-to-server calls (no `Origin`) are unaffected. The methods are `GET` only.
 
 ## Using the reference playground
 
 Because `docs.btcalpha.com.au` is allowlisted, the **"Send" button** in the
-[API Reference](/docs/api-reference) calls **production** directly. **Preview** endpoints work with
-no key; **keyed** endpoints need your `X-API-Key` supplied in the playground's auth field.
+[API Reference](/docs/api-reference) calls **production** directly — and since all historical data is
+open, every endpoint works with **no key**.
 
 <CardGroup cols={2}>
-  <Card title="Rate Limits" href="/docs/concepts/rate-limits">
-    The companion (reserved) per-tier throttling contract.
+  <Card title="Evaluate vs your book" href="/docs/recipes/evaluate-vs-your-book">
+    The killer recipe — verify every track record against your own returns, free.
   </Card>
   <Card title="Quickstart" href="/docs/get-started/quickstart">
-    Make your first preview calls now — open, no key.
+    Your first calls — open, no key.
   </Card>
 </CardGroup>
