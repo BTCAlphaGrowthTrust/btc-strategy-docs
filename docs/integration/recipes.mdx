@@ -1,0 +1,139 @@
+---
+title: Integration recipes
+description: Wiring the feed into 3Commas, Cornix, or your own exchange — with a verifying relay in front of hosted bots that can't check HMAC.
+sidebar_label: Recipes
+sidebar_position: 5
+---
+
+# Integration recipes
+
+Three common destinations: a **hosted bot** (3Commas, Cornix), and your **own exchange / OMS**. The
+contract is identical for all — a signed JSON [payload](./payload) keyed on `alias` (example:
+`helios`). The differences are entirely about **who verifies the signature** and **what order shape
+the destination expects**.
+
+:::danger Most hosted bots do NOT verify HMAC — put a relay in front
+3Commas and Cornix accept an inbound webhook but **do not verify our `X-Signature`**. If you point
+our feed straight at a hosted bot, **anyone who learns your bot's webhook URL can fire trades** —
+the signature you're paying attention to is never checked.
+
+**Always run a thin verifying relay that you control between us and the bot.** The relay verifies
+the HMAC over the raw bytes, drops `is_test` fires, then forwards a clean instruction to the bot.
+:::
+
+## The verifying relay (use this in front of every hosted bot)
+
+A few lines: verify → skip tests → translate → forward → 200. This is the only component that needs
+your `push_secret`; the bot only ever sees already-verified instructions.
+
+```python
+# relay.py  —  Flask; reuses verify() from the Verify Webhooks page
+import requests
+from flask import Flask, request, abort, jsonify
+from verify import verify          # verify(secret, raw_body, header) -> bool
+
+app = Flask(__name__)
+PUSH_SECRET = "..."                 # your push_secret (only the relay holds it)
+BOT_WEBHOOK = "https://app.example-bot.com/hook/your-private-path"
+
+@app.post("/relay")
+def relay():
+    raw = request.get_data()                                   # RAW bytes
+    if not verify(PUSH_SECRET, raw, request.headers.get("X-Signature")):
+        abort(401)                                             # reject unsigned/forged
+    sig = request.get_json()
+    if sig["is_test"]:                                         # HARD skip test fires
+        return jsonify(ok=True), 200
+    payload = to_bot_payload(sig)                              # translate to the bot's shape
+    requests.post(BOT_WEBHOOK, json=payload, timeout=5)        # forward verified instruction
+    return jsonify(ok=True), 200                               # ack us fast
+```
+
+Run the relay somewhere you control (a small VM, a serverless function), give **us** its URL as your
+webhook, and keep the bot's own webhook URL private. Add dedupe on `signal_id` here too (see
+[delivery](./delivery)) so a retried delivery doesn't double-fire the bot.
+
+## 3Commas
+
+3Commas bots take a custom webhook message that toggles a deal. Translate our signal into the
+bot's start/close message in `to_bot_payload()`:
+
+```python
+def to_bot_payload(sig):
+    # Map our action -> the bot's deal action. Size on YOUR capital (see Sizing),
+    # or let the bot use its configured position size.
+    action = "enter_long" if sig["action"] in ("long", "add") else \
+             "enter_short" if sig["action"] == "short" else "close_at_market"
+    return {
+        "secret": "<your 3commas bot message secret>",
+        "alias": sig["alias"],            # the only product discriminator
+        "action": action,
+        "instrument": sig["instrument"],
+        "signal_id": sig["signal_id"],    # for your own dedupe/audit
+    }
+```
+
+The 3Commas "message secret" is **not** a substitute for our HMAC — it only proves the message
+reached the right bot, not that *we* sent it. The relay's `verify()` is what proves authenticity.
+
+## Cornix
+
+Cornix consumes a webhook/signal message and applies your channel's preset entries, take-profits and
+stop. Forward the essentials and let Cornix apply your configured risk:
+
+```python
+def to_bot_payload(sig):
+    return {
+        "alias": sig["alias"],
+        "side": sig["side"],              # long | short | flat
+        "type": sig["signal_type"],       # entry | exit | adjust
+        "instrument": sig["instrument"],
+        "entry": sig["signal_price"],     # REFERENCE price, not a guaranteed fill
+        "stop": sig["stop"],
+        "signal_id": sig["signal_id"],
+    }
+```
+
+Same rule: Cornix won't check our signature, so it sits **behind** your relay.
+
+## Generic / your own exchange
+
+If you own the OMS, you can verify in-process — no relay needed — and size precisely on your own
+capital. This is the cleanest path:
+
+```python
+from verify import verify
+
+def on_webhook(raw_bytes, x_signature):
+    if not verify(PUSH_SECRET, raw_bytes, x_signature):
+        return 401
+    sig = json.loads(raw_bytes)           # parse the SAME bytes you verified
+    if sig["is_test"]:
+        return 200                        # HARD skip test fires
+    if sig["mode"] != "LIVE":
+        return 200                        # dry-run output is not actionable
+    qty = position_size(MY_CAPITAL, sig["base_risk_pct"],
+                        sig["signal_price"], sig["stop"])   # see Sizing
+    place_order(sig["instrument"], sig["side"], sig["action"],
+                qty, reference_price=sig["signal_price"], stop=sig["stop"])
+    return 200
+```
+
+Pair this with the **pull backstop** ([delivery](./delivery)) so a missed webhook is reconciled by
+`seq`.
+
+## TradingView is a source, not a destination
+
+:::warning Don't try to "deliver" to TradingView
+TradingView **sends** webhooks — it's an alert source — and is **not** a place you receive our feed.
+Our signal feed flows **into** your relay / OMS. Don't wire our feed *at* TradingView.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Verify webhooks" href="/docs/integration/verify-webhooks">
+    The verify() the relay depends on — Python and Node.
+  </Card>
+  <Card title="Catalogue" href="/docs/integration/catalogue">
+    Which products (aliases) you can subscribe to.
+  </Card>
+</CardGroup>

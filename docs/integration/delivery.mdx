@@ -1,0 +1,126 @@
+---
+title: Delivery & reconciliation
+description: At-least-once delivery with retry/backoff, dedupe on signal_id, the per-attempt status taxonomy, and the pull backstop pattern.
+sidebar_label: Delivery
+sidebar_position: 3
+---
+
+# Delivery & reconciliation
+
+Webhook delivery is **at-least-once**. We will deliver every signal — and under retry you may see
+the **same signal more than once**. Your receiver must be **idempotent**, and you should run the
+pull backstop so that any signal we couldn't push still reaches you.
+
+## At-least-once + retry/backoff
+
+When we POST a signal we expect a fast **200**. Anything else — a non-2xx, a timeout, a connection
+error — is a failed attempt, and we **retry with backoff**. Because a slow ack can succeed on our
+side *after* we've already given up waiting, the same `signal_id` can legitimately arrive twice.
+
+**Implication:** never assume exactly-once. Ack fast (return 200 the moment the signature verifies)
+so a slow OMS round-trip doesn't trigger needless retries — see
+[verify webhooks](./verify-webhooks).
+
+## Dedupe on `signal_id` (idempotency)
+
+`signal_id` is the stable, unique idempotency key. Record processed ids and drop repeats:
+
+```python
+seen = set()  # back this with Redis / a DB column with a UNIQUE constraint in production
+
+def handle(signal):
+    sid = signal["signal_id"]
+    if sid in seen:
+        return            # already processed — at-least-once means this WILL happen
+    if signal["is_test"]:
+        seen.add(sid)
+        return            # HARD skip test fires
+    seen.add(sid)
+    route_to_oms(signal)
+```
+
+In production, enforce idempotency in storage (a `UNIQUE` constraint on `signal_id`, or a
+conditional write) so a duplicate that arrives on another worker or after a restart is still caught.
+
+## Per-attempt status taxonomy
+
+On **our** side we log the outcome of every delivery attempt. If you compare notes with support,
+these are the values you'll see:
+
+| Status | Meaning |
+|---|---|
+| `delivered` | Your endpoint returned **2xx**. Attempt succeeded. |
+| `http_<code>` | Your endpoint returned a non-2xx, e.g. `http_401`, `http_500`. We will retry. |
+| `error` | Transport-level failure (timeout, DNS, connection refused). We will retry. |
+| `failed` | Retries **exhausted** — we stopped attempting this signal. Reconcile via the pull API. |
+
+A `failed` on our side is exactly the case the pull backstop exists for: the signal is still durably
+stored and retrievable by `seq`.
+
+## The pull backstop
+
+The pull API is **reconciliation, never the lead**. Its job is to guarantee that *a missed webhook
+is never a missed trade*. Base URL:
+
+```text
+https://btc-signal-distribution.fly.dev
+```
+
+Auth header on every pull request:
+
+```text
+X-API-Key: <key>
+```
+
+| Endpoint | Use |
+|---|---|
+| `GET /v1/signals/latest` | The most recent signal — a quick "am I current?" check. |
+| `GET /v1/signals/history?since=<seq>` | All signals with **`seq` greater than `since`** — your gap filler. |
+
+### The pattern: track `last_seq`, poll on a timer + after downtime
+
+Persist the highest `seq` you have fully processed. Reconcile (a) on a timer and (b) immediately
+after **any** downtime — a deploy, a crash, a network outage:
+
+```python
+import requests
+
+BASE = "https://btc-signal-distribution.fly.dev"
+HEADERS = {"X-API-Key": "<key>"}
+
+def reconcile(last_seq):
+    """Fetch everything newer than last_seq and process in order."""
+    r = requests.get(f"{BASE}/v1/signals/history",
+                     params={"since": last_seq}, headers=HEADERS, timeout=10)
+    r.raise_for_status()
+    rows = r.json()["data"]          # rows with seq > last_seq, ascending
+    for sig in rows:
+        handle(sig)                  # SAME idempotent handler as the webhook path
+        last_seq = max(last_seq, sig["seq"])
+    return last_seq                  # persist this
+```
+
+Because `handle()` dedupes on `signal_id`, it's safe to run reconciliation even when the webhook
+already delivered everything — overlaps are dropped, gaps are filled. Run it:
+
+- **On a timer** (e.g. every minute) as a steady safety net.
+- **On startup**, immediately, so a restart can't leave a gap.
+- **After any detected downtime** in your receiver.
+
+You can also use `previous_signal_id` as a live gap detector: if a webhook's `previous_signal_id`
+isn't a signal you've already processed, you missed one — trigger `reconcile()` now rather than
+waiting for the timer.
+
+:::tip A missed webhook is never a missed trade
+The webhook gives you latency; the pull gives you completeness. With an idempotent `handle()` keyed
+on `signal_id` and a persisted `last_seq`, every gap closes itself and nothing is double-traded.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Verify webhooks" href="/docs/integration/verify-webhooks">
+    Ack fast so slow processing doesn't trigger our retries.
+  </Card>
+  <Card title="Sizing" href="/docs/integration/sizing">
+    Turn each (deduped, verified) signal into a position size.
+  </Card>
+</CardGroup>

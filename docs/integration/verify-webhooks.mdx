@@ -1,0 +1,181 @@
+---
+title: Verifying webhooks
+description: The HMAC-SHA256 signature scheme — verify over the raw bytes, constant-time compare, reject on mismatch. Runnable Python and Node.
+sidebar_label: Verify webhooks
+sidebar_position: 2
+---
+
+# Verifying webhooks
+
+Every webhook we POST carries a signature header:
+
+```text
+X-Signature: sha256=<hex>
+```
+
+where `<hex>` is **`HMAC-SHA256(your_push_secret, raw_request_body_bytes)`** rendered as lowercase
+hex. Your `push_secret` is shared with you out of band when you onboard. Before you act on **any**
+payload, recompute the HMAC and compare.
+
+## The rules (all of them are hard)
+
+1. **Hash the RAW received bytes.** Compute the HMAC over the **exact body bytes** you received —
+   not a parsed-then-reserialized object. Re-serializing changes whitespace, key order, and number
+   formatting, and your signature **will not match**. Read the raw body first, verify, *then* parse.
+2. **Constant-time compare.** Compare the signatures with a constant-time function
+   (`hmac.compare_digest`, `crypto.timingSafeEqual`) to avoid leaking the secret via timing.
+3. **Reject on mismatch** with **HTTP 401**. Do not parse, do not enqueue, do not log the body as
+   trusted.
+4. **Ack fast, process async.** On success, return **200 immediately** and hand the work to a queue
+   or background task. Never block the 200 on your OMS round-trip — slow acks trigger our retries
+   (see [delivery](./delivery)).
+
+## Python — self-contained `verify(...)`
+
+This is importable and runnable as-is. `verify(secret, raw_body, header) -> bool`.
+
+```python
+# verify.py  —  no third-party deps
+import hashlib
+import hmac
+
+
+def verify(secret, raw_body, header):
+    """Return True iff `header` is a valid X-Signature for `raw_body`.
+
+    secret   : your push_secret (str or bytes)
+    raw_body : the EXACT raw request body bytes (bytes); never a re-serialized dict
+    header   : the X-Signature header value, e.g. "sha256=abcd..." (str or None)
+    """
+    if not header or not header.startswith("sha256="):
+        return False
+    if isinstance(secret, str):
+        secret = secret.encode("utf-8")
+    if isinstance(raw_body, str):
+        raw_body = raw_body.encode("utf-8")
+
+    sent = header.split("=", 1)[1].strip()
+    expected = hmac.new(secret, raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(sent, expected)  # constant-time
+
+
+if __name__ == "__main__":
+    # Quick self-test: sign a body the same way we do, then verify it.
+    secret = "test_push_secret"
+    body = b'{"alias":"helios","signal_id":"sig_helios_000421","is_test":false}'
+    sig = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    assert verify(secret, body, sig) is True
+    assert verify(secret, body, "sha256=deadbeef") is False
+    assert verify(secret, body + b" ", sig) is False  # one byte changed -> rejected
+    print("ok")
+```
+
+### Flask receiver
+
+```python
+from flask import Flask, request, abort, jsonify
+from verify import verify
+
+app = Flask(__name__)
+PUSH_SECRET = "..."  # your push_secret
+
+@app.post("/webhook")
+def webhook():
+    raw = request.get_data()                    # RAW bytes — NOT request.json / request.form
+    if not verify(PUSH_SECRET, raw, request.headers.get("X-Signature")):
+        abort(401)                              # reject on mismatch
+    signal = request.get_json()                 # safe to parse only AFTER verifying
+    if signal["is_test"]:                       # HARD skip test fires
+        return jsonify(ok=True), 200
+    enqueue(signal)                             # hand to background worker
+    return jsonify(ok=True), 200                # ack fast; process async
+```
+
+### FastAPI receiver
+
+```python
+from fastapi import FastAPI, Request, HTTPException
+from verify import verify
+
+app = FastAPI()
+PUSH_SECRET = "..."
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    raw = await request.body()                  # RAW bytes — NOT await request.json()
+    if not verify(PUSH_SECRET, raw, request.headers.get("X-Signature")):
+        raise HTTPException(status_code=401)
+    import json
+    signal = json.loads(raw)                    # parse the SAME bytes you verified
+    if signal["is_test"]:
+        return {"ok": True}
+    await enqueue(signal)
+    return {"ok": True}
+```
+
+## Node — verify + Express receiver
+
+```js
+// verify.js
+const crypto = require("crypto");
+
+// rawBody MUST be a Buffer of the exact received bytes (never a re-serialized object).
+function verify(secret, rawBody, header) {
+  if (!header || !header.startsWith("sha256=")) return false;
+  const sent = header.slice("sha256=".length).trim();
+  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(sent, "hex");
+  const b = Buffer.from(expected, "hex");
+  if (a.length !== b.length) return false;      // timingSafeEqual requires equal length
+  return crypto.timingSafeEqual(a, b);          // constant-time
+}
+
+module.exports = { verify };
+```
+
+```js
+// server.js
+const express = require("express");
+const { verify } = require("./verify");
+
+const app = express();
+const PUSH_SECRET = "..."; // your push_secret
+
+// Capture the RAW body for THIS route — do NOT use express.json() here.
+app.post("/webhook", express.raw({ type: "*/*" }), (req, res) => {
+  const raw = req.body; // a Buffer of the exact bytes
+  if (!verify(PUSH_SECRET, raw, req.get("X-Signature"))) {
+    return res.sendStatus(401); // reject on mismatch
+  }
+  const signal = JSON.parse(raw.toString("utf8")); // parse the SAME bytes you verified
+  if (signal.is_test) return res.sendStatus(200); // HARD skip test fires
+  enqueue(signal); // background worker
+  res.sendStatus(200); // ack fast; process async
+});
+```
+
+## The framework raw-body gotcha
+
+Most web frameworks **eagerly parse JSON** and hand you a dict/object. If you re-serialize that to
+hash it, the bytes differ from what we signed and **every signature fails**. Grab the raw body
+instead:
+
+| Framework | Get the raw bytes with | Do **NOT** hash |
+|---|---|---|
+| **Flask** | `request.get_data()` | `request.json` / `request.get_json()` |
+| **FastAPI / Starlette** | `await request.body()` | `await request.json()` |
+| **Express** | `express.raw({ type: "*/*" })` then `req.body` (a Buffer) | `express.json()` body |
+
+:::danger Never hash a re-serialized body
+`json.dumps(request.json)` is **not** the bytes we signed. Whitespace, key order and float
+formatting all differ. Verify over the **raw received bytes**, then parse those same bytes.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Delivery" href="/docs/integration/delivery">
+    Retries, dedupe, and the pull backstop once verification passes.
+  </Card>
+  <Card title="Recipes" href="/docs/integration/recipes">
+    A verifying relay in front of hosted bots that can't check HMAC.
+  </Card>
+</CardGroup>

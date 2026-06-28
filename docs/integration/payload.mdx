@@ -1,0 +1,113 @@
+---
+title: The signal payload
+description: The canonical v1.0 signal — one real aliased example and every field with its type and meaning.
+sidebar_label: Payload
+sidebar_position: 1
+---
+
+# The signal payload
+
+Every webhook body — and every row returned by the pull API — is a single **v1.0 signal object**.
+The contract is product-agnostic: the only product discriminator is the **`alias`** field. The
+example alias throughout is **`helios`**.
+
+## Canonical v1.0 signal
+
+```json
+{
+  "schema_version": "1.0", "signal_id": "sig_helios_000421", "seq": 421,
+  "previous_signal_id": "sig_helios_000417", "alias": "helios",
+  "timestamp": "2026-06-28T12:00:00Z", "timestamp_ms": 1782648000000, "engine_commit": "a1b2c3d",
+  "mode": "LIVE", "is_test": false, "action": "long", "side": "long", "signal_type": "entry",
+  "order_type": "market", "fraction": null, "instrument": "BTC-PERPETUAL", "venue": "Deribit",
+  "base": "BTC", "quote": "USD", "signal_price": 64000.0, "price_as_of": "2026-06-28T12:00:00Z",
+  "stop": 61800.0, "base_risk_pct": 0.025, "effective_risk_pct": 0.225, "implied_leverage": 0.73,
+  "timeframe": "4H", "our_book_size_contracts": 9070.0, "our_book_notional_usd": 9070.0,
+  "our_book_size_note": "Our size on our book — not a recommended size for you.",
+  "position_after": {"in_pos": true, "side": "long", "entry_price": 64000.0, "entry_stop": 61800.0},
+  "verification_state": "dual_verified", "tv_status": "verified",
+  "disclaimer": "Live trade signal from a real-money engine; trading carries substantial risk and this is not personal financial advice."
+}
+```
+
+## HARD RULE — skip any signal where `is_test` is true
+
+:::danger Drop `is_test: true` before anything else
+**A subscriber MUST skip any signal where `is_test` is `true`.** It is an occasional
+connectivity / test fire — **never** a tradeable signal — and it can carry any `action`. Gate on it
+first, before sizing or routing to your OMS. Acknowledge it (return 200) and do nothing with it.
+A real, actionable signal is always `is_test: false` and `mode: "LIVE"`.
+:::
+
+## Field reference
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | string | Payload schema version. `"1.0"` today. Pin to it; see [versioning](/docs/concepts/versioning). |
+| `signal_id` | string | **Stable unique id** for this signal. Your idempotency / dedupe key. |
+| `seq` | integer | Monotonic per-product sequence number. Used by the pull backstop (`history?since=`). |
+| `previous_signal_id` | string \| null | `signal_id` of the prior signal for this product — lets you detect a gap. |
+| `alias` | string | **The product identifier.** The only product discriminator in the contract (e.g. `"helios"`). |
+| `timestamp` | string (ISO-8601 UTC) | When the signal fired. |
+| `timestamp_ms` | integer | Same instant as Unix epoch milliseconds. |
+| `engine_commit` | string | Short git commit of the engine build that produced the signal. |
+| `mode` | enum | `LIVE` or `DRY_RUN`. Only `LIVE` is actionable. |
+| `is_test` | boolean | **`true` = test/connectivity fire — MUST be skipped.** `false` = real signal. |
+| `action` | enum | What to do: `long` \| `short` \| `close` \| `flat` \| `reduce` \| `add` \| `adjust`. |
+| `side` | enum \| null | Resulting market side: `long` \| `short` \| `flat` \| `null`. |
+| `signal_type` | enum | `entry` \| `exit` \| `adjust`. |
+| `order_type` | enum | `market` \| `limit`. |
+| `fraction` | number \| null | For partial `reduce`/`add`, the fraction of position affected; `null` when not applicable. |
+| `instrument` | string | Instrument symbol, e.g. `"BTC-PERPETUAL"`. |
+| `venue` | string | Venue the engine trades, e.g. `"Deribit"`. |
+| `base` | string | Base asset, e.g. `"BTC"`. |
+| `quote` | string | Quote asset, e.g. `"USD"`. |
+| `signal_price` | number | **Reference** price at signal time — **not a guaranteed fill.** Use for sizing math, not as an execution promise. |
+| `price_as_of` | string (ISO-8601 UTC) | Timestamp the `signal_price` was observed. |
+| `stop` | number | Protective stop price. Paired with `signal_price` to derive size (see [sizing](./sizing)). |
+| `base_risk_pct` | number | **Per-trade risk as a fraction of YOUR capital** (e.g. `0.025` = 2.5%). The input to *your* sizing. |
+| `effective_risk_pct` | number | Our engine's effective risk for this trade on our own book. Informational — not your sizing input. |
+| `implied_leverage` | number | Notional ÷ capital implied by `base_risk_pct` and the stop distance. `notional = your_capital × implied_leverage`. |
+| `timeframe` | string | The bar timeframe the strategy runs on, e.g. `"4H"`. |
+| `our_book_size_contracts` | number | The size **we** put on **our** book, in contracts. Informational only. |
+| `our_book_notional_usd` | number | Our book size in USD notional. Informational only. |
+| `our_book_size_note` | string | Reminder that our size is ours — **not a recommended size for you.** |
+| `position_after` | object | Engine state **after** this signal: `{ in_pos, side, entry_price, entry_stop }`. |
+| `verification_state` | enum | Internal validation depth, e.g. `dual_verified`. See [verification](/docs/concepts/verification). |
+| `tv_status` | enum | External TradingView cross-check status, e.g. `verified`. |
+| `disclaimer` | string | Standing risk disclaimer carried on every signal. |
+
+### `position_after` sub-fields
+
+| Field | Type | Meaning |
+|---|---|---|
+| `in_pos` | boolean | Whether the engine is in a position after this signal. |
+| `side` | enum \| null | `long` \| `short` \| `flat` \| `null` after this signal. |
+| `entry_price` | number \| null | The engine's entry price for the resulting position. |
+| `entry_stop` | number \| null | The engine's stop for the resulting position. |
+
+## Enum summary
+
+| Field | Allowed values |
+|---|---|
+| `action` | `long` \| `short` \| `close` \| `flat` \| `reduce` \| `add` \| `adjust` |
+| `side` | `long` \| `short` \| `flat` \| `null` |
+| `signal_type` | `entry` \| `exit` \| `adjust` |
+| `order_type` | `market` \| `limit` |
+| `mode` | `LIVE` \| `DRY_RUN` |
+
+:::note Our size is ours, not yours
+`our_book_size_contracts`, `our_book_notional_usd`, `effective_risk_pct` and
+`our_book_size_note` describe what **we** did on **our** book. They are informational. **Your** size
+comes only from your own capital, `base_risk_pct`, `signal_price` and `stop` — see
+**[Sizing](./sizing)**.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Verify webhooks" href="/docs/integration/verify-webhooks">
+    Confirm a payload is genuinely from us before you act on it.
+  </Card>
+  <Card title="Sizing" href="/docs/integration/sizing">
+    Turn the payload into a position size on your capital.
+  </Card>
+</CardGroup>

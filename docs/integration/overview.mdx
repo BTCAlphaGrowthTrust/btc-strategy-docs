@@ -1,0 +1,81 @@
+---
+title: Integration overview
+description: How the live signal feed reaches your OMS — webhook-first push, with a pull backstop so a missed webhook is never a missed trade.
+sidebar_label: Overview
+sidebar_position: 0
+---
+
+# Wiring the live feed into your OMS
+
+The live BTC signal feed is a **push-first** product. When a strategy fires, we **POST a signed
+JSON payload to your webhook** within seconds. You verify the signature, ack fast, and hand the
+signal to your own OMS. There is nothing for you to poll on the hot path.
+
+A pull API sits **behind** the webhook as a reconciliation backstop — never the lead. The design
+goal is simple:
+
+> **A missed webhook is never a missed trade.** Every signal you were ever sent is durably stored
+> and retrievable by sequence number, so any gap — a deploy, a network blip, an outage on your
+> side — is closed by reconciliation, not lost.
+
+## The two channels
+
+| Channel | Direction | Role | Auth |
+|---|---|---|---|
+| **Webhook** (push) | us → you | **Lead.** Real-time delivery the instant a strategy fires. | `X-Signature: sha256=<hmac>` over the raw body |
+| **Pull API** (reconcile) | you → us | **Backstop.** Catch up after downtime; confirm you missed nothing. | `X-API-Key: <key>` |
+
+Build the webhook receiver first. Add the pull reconciler second. You need **both** to be safe —
+the webhook for latency, the pull for completeness.
+
+```text
+strategy fires ──► we sign + POST ──► your webhook ──► verify sig ──► 200 OK (fast)
+                                                          │
+                                                          └─► enqueue ──► your OMS (async)
+
+on a timer / after downtime ──► you GET /v1/signals/history?since=<last_seq> ──► fill any gap
+```
+
+## The product is the `alias`, not a strategy
+
+Every signal carries an **`alias`** field — that is the **only** product identifier in the
+contract. Throughout these docs the example alias is **`helios`**. Your integration must key off
+`alias` and nothing else; it is fully product-agnostic. If you subscribe to more than one product,
+the same webhook receiver handles all of them and routes on `alias`.
+
+## HARD RULE — skip any signal where `is_test` is true
+
+:::danger A subscriber MUST skip any signal where `is_test` is `true`
+`is_test: true` is an **occasional connectivity / test fire**. It is **never** a tradeable signal.
+It can carry any `action` and look exactly like a real entry. Your receiver **must** drop it before
+it reaches sizing or your OMS:
+
+```python
+if signal["is_test"]:
+    return ok()        # acknowledge, then do nothing — never trade a test fire
+```
+
+This is not a footnote or a nice-to-have. Treating a test fire as real **will** put a position on
+your book that the engine never took. Gate on `is_test` first, before anything else.
+:::
+
+A real, actionable signal is always `is_test: false` **and** `mode: "LIVE"`. (`mode: "DRY_RUN"`
+signals are non-actionable dry-run output and should likewise not be traded.)
+
+## What you build
+
+1. **[Payload](./payload)** — the canonical v1.0 signal and every field.
+2. **[Verify webhooks](./verify-webhooks)** — the HMAC signature scheme, runnable verify code, and the framework raw-body gotchas.
+3. **[Delivery](./delivery)** — at-least-once semantics, retry/backoff, dedupe, and the pull backstop pattern.
+4. **[Sizing](./sizing)** — how to turn `base_risk_pct` and `stop` into a position size on *your* capital.
+5. **[Recipes](./recipes)** — 3Commas, Cornix, and your own exchange — with a verifying relay in front of hosted bots.
+6. **[Catalogue](./catalogue)** — the manifest that lists every product you can subscribe to.
+
+<CardGroup cols={2}>
+  <Card title="The payload" href="/docs/integration/payload">
+    The canonical signal and the full field table.
+  </Card>
+  <Card title="Verify webhooks" href="/docs/integration/verify-webhooks">
+    HMAC over the raw bytes — runnable Python and Node.
+  </Card>
+</CardGroup>

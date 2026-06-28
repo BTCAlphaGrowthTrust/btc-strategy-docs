@@ -1,0 +1,121 @@
+---
+title: Product catalogue
+description: The manifest is the single source of truth for which products (aliases) you can subscribe to. Fetch it client-side and render it data-driven.
+sidebar_label: Catalogue
+sidebar_position: 6
+---
+
+# Product catalogue
+
+The set of products you can subscribe to is **not hardcoded** in these docs — it's served by a
+single **manifest** endpoint. Every product is identified by its **`alias`** (the example
+throughout is `helios`); the manifest is the authoritative list of those aliases and the bundles
+they're grouped into.
+
+## The manifest endpoint
+
+```bash
+curl https://btc-signal-distribution.fly.dev/v1/manifest
+```
+
+Shape:
+
+```json
+{
+  "schema_version": "1.0",
+  "products": [
+    { "alias": "helios", "name": "Helios", "blurb": "Short blurb describing the product." }
+  ],
+  "bundles": {
+    "...": ["helios", "..."]
+  }
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | string | Manifest schema version. |
+| `products` | array | One entry per product: `{ alias, name, blurb }`. **`alias` is the identifier you key on.** |
+| `bundles` | object | Named groupings — each value is a list of `alias` strings. |
+
+Because the manifest is the single source of truth, your integration should **read it at runtime**
+rather than maintaining its own copy. New products appear in `products` with a new `alias`; your
+webhook receiver already routes on `alias`, so nothing in your code changes.
+
+## Live, data-driven render
+
+The list below fetches `/v1/manifest` **in your browser** and renders whatever the manifest
+currently returns — no per-product hardcoding on this page:
+
+```jsx
+import React, { useEffect, useState } from "react";
+
+export default function Catalogue() {
+  const [m, setM] = useState(null);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    fetch("https://btc-signal-distribution.fly.dev/v1/manifest")
+      .then((r) => r.json())
+      .then(setM)
+      .catch((e) => setErr(String(e)));
+  }, []);
+
+  if (err) return <p>Could not load the manifest: {err}</p>;
+  if (!m) return <p>Loading the live catalogue…</p>;
+
+  return (
+    <div>
+      <h3>Products</h3>
+      <table>
+        <thead>
+          <tr><th>Alias</th><th>Name</th><th>Blurb</th></tr>
+        </thead>
+        <tbody>
+          {m.products.map((p) => (
+            <tr key={p.alias}>
+              <td><code>{p.alias}</code></td>
+              <td>{p.name}</td>
+              <td>{p.blurb}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3>Bundles</h3>
+      <ul>
+        {Object.entries(m.bundles).map(([name, aliases]) => (
+          <li key={name}>
+            <strong>{name}</strong>: {aliases.map((a) => <code key={a}>{a}</code>).reduce((acc, el) => acc === null ? [el] : [...acc, ", ", el], null)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+The same fetch works from any client — pull `/v1/manifest` on startup to discover available
+aliases, then subscribe to the ones you want.
+
+```python
+import requests
+m = requests.get("https://btc-signal-distribution.fly.dev/v1/manifest", timeout=10).json()
+for p in m["products"]:
+    print(p["alias"], "—", p["blurb"])
+```
+
+:::note The alias is the contract
+Across the entire integration — webhook payloads, the pull API, the manifest — the **only** product
+discriminator is the `alias`. Build against `alias` and the catalogue can grow without any change on
+your side.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Overview" href="/docs/integration/overview">
+    How the push + pull model fits together.
+  </Card>
+  <Card title="The payload" href="/docs/integration/payload">
+    Where the alias appears on every signal.
+  </Card>
+</CardGroup>

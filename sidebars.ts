@@ -23,6 +23,20 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Integration',
+      collapsed: false,
+      items: [
+        'integration/overview',
+        'integration/payload',
+        'integration/verify-webhooks',
+        'integration/delivery',
+        'integration/sizing',
+        'integration/recipes',
+        'integration/catalogue',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Recipes',
       collapsed: false,
       items: ['recipes/evaluate-vs-your-book'],

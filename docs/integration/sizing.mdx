@@ -1,0 +1,100 @@
+---
+title: Sizing on your capital
+description: What base_risk_pct means, the position-size formula, and a worked example using the helios signal.
+sidebar_label: Sizing
+sidebar_position: 4
+---
+
+# Sizing on your capital
+
+We give you the **inputs and the formula** — never an absolute size. Your position is a function of
+**your** capital and the signal's risk and stop. The size we put on **our** book
+(`our_book_size_contracts`, `our_book_notional_usd`) is informational and is **not a recommendation
+for you**.
+
+## What `base_risk_pct` means
+
+`base_risk_pct` is the **per-trade risk as a fraction of YOUR capital**. A value of `0.025` means
+the trade is designed to risk **2.5% of your capital** between entry and stop. It is the single
+input you scale by your own account size.
+
+> `effective_risk_pct` and `implied_leverage` are *our* engine's figures for *our* book — useful
+> context, but **`base_risk_pct` is the number you size on.**
+
+## The formula
+
+```text
+risk_per_unit   = | signal_price − stop |          # price distance to the stop
+capital_at_risk = your_capital × base_risk_pct      # how much you choose to risk
+position_size   = capital_at_risk ÷ risk_per_unit   # units of the instrument
+```
+
+Equivalently, the notional this implies is:
+
+```text
+notional = your_capital × implied_leverage
+```
+
+:::warning `signal_price` is a reference, not a fill
+`signal_price` is the price observed when the signal fired — use it for the sizing math. It is
+**not** a guaranteed execution price. Size against it, but expect your real fill to differ, and
+re-check your risk against your *actual* entry.
+:::
+
+## Worked example — `helios`
+
+Take the canonical [payload](./payload) and assume **your_capital = $250,000**:
+
+| Input | Value |
+|---|---|
+| `alias` | `helios` |
+| `signal_price` | `64000.0` |
+| `stop` | `61800.0` |
+| `base_risk_pct` | `0.025` (2.5%) |
+| `implied_leverage` | `0.73` |
+| your_capital | `$250,000` (your number) |
+
+```text
+risk_per_unit   = |64000.0 − 61800.0|      = 2200.0  USD per unit
+capital_at_risk = 250000 × 0.025           = 6250.0  USD
+position_size   = 6250.0 ÷ 2200.0          ≈ 2.84    units (BTC-PERPETUAL)
+```
+
+Cross-check via leverage:
+
+```text
+notional ≈ your_capital × implied_leverage = 250000 × 0.73 ≈ 182,500 USD
+units    ≈ notional ÷ signal_price         = 182500 ÷ 64000 ≈ 2.85 units
+```
+
+Both routes land at roughly the same size (small differences come from rounding in
+`implied_leverage`). If the position moves against you to `61800.0`, you lose
+`2.84 × 2200 ≈ $6,250` — your chosen **2.5%**, as designed.
+
+```python
+def position_size(your_capital, base_risk_pct, signal_price, stop):
+    risk_per_unit = abs(signal_price - stop)
+    if risk_per_unit == 0:
+        raise ValueError("signal_price == stop: undefined risk distance")
+    return (your_capital * base_risk_pct) / risk_per_unit
+
+# helios example
+print(position_size(250_000, 0.025, 64000.0, 61800.0))   # -> ~2.84 units
+```
+
+## Things to honor in your own sizing
+
+- **Round to the venue's contract/lot increment** and respect minimum order size before sending.
+- **Cap leverage to your own limits** — `implied_leverage` is ours; never exceed what your risk
+  policy allows.
+- **Re-derive risk from your real fill**, not from `signal_price`, once you're in.
+- **Skip `is_test: true` entirely** — it never reaches sizing (see [overview](./overview)).
+
+<CardGroup cols={2}>
+  <Card title="The payload" href="/docs/integration/payload">
+    Where base_risk_pct, signal_price and stop come from.
+  </Card>
+  <Card title="Recipes" href="/docs/integration/recipes">
+    Send the sized order to 3Commas, Cornix, or your own exchange.
+  </Card>
+</CardGroup>
