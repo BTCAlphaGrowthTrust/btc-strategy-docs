@@ -1,0 +1,113 @@
+---
+title: Program endpoints
+description: The gated Demeter program API and the keyless marketing preview — manifest, basket, deploys, performance, profile and simulate.
+sidebar_label: Endpoints
+sidebar_position: 2
+---
+
+# Program endpoints
+
+Demeter exposes **two surfaces**: a **gated product API** for entitled subscribers, and a **keyless
+preview** for marketing and evaluation. Both share the base URL:
+
+```text
+https://btc-signal-distribution.fly.dev
+```
+
+## Gated product API
+
+Every gated endpoint requires an `X-API-Key` header **and** the **`demeter` entitlement** on that
+key. Without the entitlement the key is rejected even if it is valid for the signal feed.
+
+| Method & path | Purpose |
+|---|---|
+| `GET /v1/program` | Program **manifest** — alias, tiers, weights, `deployment_state`, window bounds. |
+| `GET /v1/program/basket?view=reference\|personal` | The current basket. `reference` = canonical weights/prices; `personal` = scaled to your profile equity. |
+| `GET /v1/program/deploys?since=<seq>` | Every deployment after `<seq>` — the pull backstop for the basket. |
+| `GET /v1/program/performance?benchmark=dca\|hodl\|lump_sum` | Published performance vs the chosen benchmark (avg cost basis, advantage, % cheaper). |
+| `PUT /v1/program/profile` | Set your accumulation profile (equity, contribution cadence) used by `view=personal`. |
+| `POST /v1/program/simulate` | Run the full basket over a window against your profile and get the benchmark table back. |
+
+:::note Entitlement is per-key
+`X-API-Key` alone is not enough — the key must carry the `demeter` entitlement. A signal-feed key
+without it gets `403`. See [error codes](/docs/concepts/error-codes).
+:::
+
+## Keyless preview
+
+The preview surface needs **no API key**. It is **rate-limited** and **input-bounded** (simulate
+inputs are clamped to sane ranges) because it is public marketing. It is enough to **reproduce every
+sales-page number**.
+
+| Method & path | Purpose |
+|---|---|
+| `GET /v1/program/preview` | The reference basket + the full benchmark table, keyless. |
+| `POST /v1/program/preview/simulate` | Run a bounded simulation (your equity + cadence) keyless. |
+
+### `GET /v1/program/preview`
+
+```bash
+curl https://btc-signal-distribution.fly.dev/v1/program/preview
+```
+
+```json
+{
+  "schema_version": "1.0", "alias": "demeter",
+  "deployment_state": "accumulating",
+  "instrument": "BTC-USDT-SPOT",
+  "window": { "bars": "4H", "start_close": 12920.0 },
+  "tiers": [
+    { "tier": "core", "weight": 0.60 },
+    { "tier": "cyclical", "weight": 0.20 },
+    { "tier": "tactical", "weight": 0.20 }
+  ],
+  "avg_cost_basis": 7172.66,
+  "benchmarks": {
+    "dca":       { "value": 15462.0, "advantage_bps": 5360, "pct_cheaper": 53.6 },
+    "vwap":      { "value": 28819.0, "advantage_bps": 7510, "pct_cheaper": 75.1 },
+    "lump_sum":  { "value": 12920.0, "advantage_bps": 4450, "pct_cheaper": 44.5 },
+    "hodl":      { "value": 12920.0, "advantage_bps": 4450, "pct_cheaper": 44.5 }
+  },
+  "pct_capital_cheapest_quartile": 0.41,
+  "tv_status": "provisional"
+}
+```
+
+### `POST /v1/program/preview/simulate`
+
+```bash
+curl -X POST https://btc-signal-distribution.fly.dev/v1/program/preview/simulate \
+  -H "Content-Type: application/json" \
+  -d '{ "equity_usd": 100000, "contribution_cadence_bars": 84 }'
+```
+
+```json
+{
+  "schema_version": "1.0", "alias": "demeter",
+  "input": { "equity_usd": 100000, "contribution_cadence_bars": 84 },
+  "total_usd_deployed": 100000.0,
+  "total_btc_accumulated": 13.943,
+  "avg_cost_basis": 7172.66,
+  "benchmarks": {
+    "dca":      { "value": 15462.0, "pct_cheaper": 53.6 },
+    "vwap":     { "value": 28819.0, "pct_cheaper": 75.1 },
+    "lump_sum": { "value": 12920.0, "pct_cheaper": 44.5 },
+    "hodl":     { "value": 12920.0, "pct_cheaper": 44.5 }
+  }
+}
+```
+
+:::note Bounded inputs
+`equity_usd` and `contribution_cadence_bars` are clamped to bounded ranges on the keyless surface.
+The **shape** of the response is identical to the gated `POST /v1/program/simulate`; only the input
+ceilings differ.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Benchmark methodology" href="/docs/buy-program/benchmark-methodology">
+    Reproduce every number above from this keyless preview.
+  </Card>
+  <Card title="The data model" href="/docs/buy-program/data-model">
+    The deployment object behind every basket row.
+  </Card>
+</CardGroup>

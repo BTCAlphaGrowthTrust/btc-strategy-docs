@@ -1,0 +1,70 @@
+---
+title: Buy Program overview
+description: Demeter — a non-custodial, advisory BTC accumulation basket that deploys into statistical dips to drive lifetime cost basis below DCA.
+sidebar_label: Overview
+sidebar_position: 0
+---
+
+# Demeter — the BTC accumulation basket
+
+**Demeter** is a **non-custodial, advisory** BTC accumulation program. It is not a trade feed and it
+never touches your keys or your custody. Instead it publishes a **basket** — a set of statistically
+sized buy deployments — designed to do one thing: **drive your lifetime cost basis below a naive
+dollar-cost-average (DCA) of the same capital.**
+
+Where the live signal feed is **active** — discrete entries and exits a subscriber must execute —
+Demeter is **passive**. You contribute capital on your own cadence; the program tells you *how much
+of your equity to deploy* into BTC each time the market reaches a statistically cheap level. You
+hold what you accumulate. There is no exit, no stop, no churn.
+
+> **The product alias is `demeter`.** Throughout these docs that is the only product identifier you
+> key off — exactly as the signal feed keys off its own `alias`.
+
+## What it does
+
+Demeter watches BTC on 4H bars and **deploys into dips**: when price is statistically depressed
+relative to the deployment window, the program fires a buy and reports a `deploy_pct` — the fraction
+of your equity to put to work at that moment. Over a full window the accumulated buys land, on
+average, **well below** both VWAP and a calendar DCA of the same total capital. Every sales-page
+number quantifying that advantage is reproducible from the keyless preview endpoint — see
+**[Benchmark methodology](./benchmark-methodology)**.
+
+## Tiers, aliased by horizon
+
+The basket is split across three tiers, **aliased by horizon** — you never see the underlying
+mechanism, only the horizon label and a depth band:
+
+| Tier | Horizon | Static weight |
+|---|---|---|
+| **core** | longest | 60% |
+| **cyclical** | medium | 20% |
+| **tactical** | shortest | 20% |
+
+Each tier fires at one of two **depth** bands, **`d1`** (shallower dip) or **`d2`** (deeper dip).
+A deployment is fully described by its tier (`core` / `cyclical` / `tactical`) and its depth
+(`d1` / `d2`) — nothing more. See **[Data model](./data-model)**.
+
+## Verification status
+
+:::note Demeter is backtested and engine-verified — but it is *not* one of the dual-verified signal strategies
+Demeter is **backtested** and **engine-verified**: the production engine is **bit-exact** against a
+canonical reference port, so the numbers the program publishes are exactly the numbers the
+methodology computes. Its `tv_status` is **`provisional`** — it has **not** completed independent
+forward verification, and it is **not** part of the dual-verified live signal set. Treat Demeter as
+an advisory accumulation aid, not a verified live-trading strategy.
+:::
+
+## What you build
+
+1. **[Data model](./data-model)** — the basket object, `deploy_pct`, tiers, and `deployment_state`.
+2. **[Endpoints](./endpoints)** — the gated program API and the keyless marketing preview.
+3. **[Benchmark methodology](./benchmark-methodology)** — exactly how every published number is computed, with a worked example you can recompute yourself.
+
+<CardGroup cols={2}>
+  <Card title="The data model" href="/docs/buy-program/data-model">
+    The basket object, deploy_pct, tier weights, and deployment_state.
+  </Card>
+  <Card title="Benchmark methodology" href="/docs/buy-program/benchmark-methodology">
+    Reproduce avg cost basis, DCA, VWAP and lump-sum from the keyless preview.
+  </Card>
+</CardGroup>

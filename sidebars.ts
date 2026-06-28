@@ -37,6 +37,18 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Buy Program',
+      collapsed: false,
+      items: [
+        'buy-program/overview',
+        'buy-program/data-model',
+        'buy-program/endpoints',
+        'buy-program/benchmark-methodology',
+        'buy-program/verify',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Recipes',
       collapsed: false,
       items: ['recipes/evaluate-vs-your-book'],

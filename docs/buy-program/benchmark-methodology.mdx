@@ -1,0 +1,167 @@
+---
+title: Benchmark methodology
+description: Exactly how every Demeter sales-page number is computed — avg cost basis, DCA, VWAP, lump-sum, HODL, advantage_bps and % cheaper — with a worked example you can recompute yourself.
+sidebar_label: Benchmark methodology
+sidebar_position: 3
+---
+
+# Benchmark methodology
+
+This is the page a quant or treasury needs: **exactly how every published Demeter number is
+computed**, so you can reproduce each one from the raw deployments. There is no magic and no hidden
+parameter — every figure is a closed-form function of the deployments and the 4H closes in the
+window. The whole window is available keyless from `GET /v1/program/preview`.
+
+Throughout, a **fire** is a single deployment; the **window** is the set of 4H bars over which the
+basket deployed; `usd_i`, `btc_i` and `price_i` are the USD deployed, BTC accumulated and reference
+price at fire `i`.
+
+## avg cost basis
+
+The headline number. The **average cost basis** is total USD deployed divided by total BTC
+accumulated, across **every** fire in the window:
+
+```text
+avg_cost = Σ usd_i  ÷  Σ btc_i      (sum over all fires in the window)
+```
+
+Because each fire buys `btc_i = usd_i / price_i`, this is a **deployment-weighted** average price —
+it is pulled down hard by the fires that landed at the cheapest prices.
+
+## VWAP
+
+The window's **volume-weighted average price** over the 4H bars — what you'd have paid on average if
+you bought continuously in proportion to traded volume:
+
+```text
+VWAP = Σ (close_b × volume_b)  ÷  Σ volume_b      (sum over all 4H bars b in the window)
+```
+
+## naive DCA
+
+A **calendar** dollar-cost-average of the **same total capital** — equal-USD buys on a fixed cadence,
+the honest "just buy a fixed amount every payday" baseline:
+
+```text
+equal_usd = (Σ usd_i) ÷ N_contributions
+dca_avg   = (Σ usd_i) ÷ Σ (equal_usd ÷ price_at_contribution)
+```
+
+The cadence is **one buy per contribution period of 84 × 4H bars (≈ biweekly)**: `N_contributions`
+is the number of those periods in the window, each buying `equal_usd` of BTC at that period's price.
+Same total dollars as Demeter, spread evenly over the calendar instead of concentrated into dips.
+
+## lump-sum
+
+Deploy **everything at the start** of the window — the single buy at the window's **first close**:
+
+```text
+lump_sum = first_close_of_window
+```
+
+## HODL
+
+Buy-and-hold from the same entry. The HODL **entry** is the **same window-start price**, so for cost
+purposes:
+
+```text
+HODL = first_close_of_window      (= lump_sum)
+```
+
+(HODL and lump-sum share the window-start entry price; they report identically as a cost benchmark.)
+
+## advantage_bps and "% cheaper"
+
+For **any** benchmark `B`, the two comparison figures are:
+
+```text
+advantage_bps = (B − avg_cost) ÷ B × 10000
+pct_cheaper   = (1 − avg_cost ÷ B) × 100
+```
+
+These are the **same quantity** in different units: `advantage_bps = pct_cheaper × 100`. Both say
+"how far below the benchmark did Demeter's average cost land."
+
+## % capital in the cheapest quartile
+
+How concentrated the deployment was at genuinely cheap prices: the USD deployed at fires whose
+`reference_price` was **at or below the 25th-percentile price of the window**, over total USD
+deployed:
+
+```text
+pct_cheapest_quartile = ( Σ usd_i  where price_i ≤ P25 )  ÷  ( Σ usd_i )
+```
+
+where `P25` is the 25th percentile of the window's 4H closes.
+
+## Worked example — the current reference numbers
+
+These are the live reference figures published on the sales page. The average cost basis is:
+
+```text
+avg_cost = $7,172.66
+```
+
+| Benchmark | Value | "% cheaper" | advantage_bps |
+|---|---|---|---|
+| **naive DCA** | $15,462 | **53.6%** | 5361 |
+| **VWAP** | $28,819 | **75.1%** | 7511 |
+| **lump-sum** | $12,920 | **44.5%** | 4448 |
+| **HODL** | $12,920 | **44.5%** | 4448 |
+
+You can **recompute every percentage from just two numbers** — `avg_cost` and the benchmark value:
+
+```text
+DCA   : (1 − 7172.66 / 15462) × 100 = 53.6%      → cheaper than buying on a calendar
+VWAP  : (1 − 7172.66 / 28819) × 100 = 75.1%      → cheaper than the window's volume-weighted price
+lump  : (1 − 7172.66 / 12920) × 100 = 44.5%      → cheaper than deploying everything at the start
+HODL  : (1 − 7172.66 / 12920) × 100 = 44.5%      → cheaper than buy-and-hold from window start
+```
+
+And the same numbers in basis points, e.g. DCA:
+
+```text
+advantage_bps = (15462 − 7172.66) / 15462 × 10000 = 5361 bps   (= 53.6% × 100)
+```
+
+:::note Every number is reproducible from the keyless preview
+**Every figure on this page is reproducible from `GET /v1/program/preview`** — no API key required.
+The preview returns `avg_cost_basis` and each benchmark's `value`, `advantage_bps` and `pct_cheaper`;
+the formulas above are all you need to derive one from the others and confirm they agree.
+:::
+
+## Verify it yourself
+
+Pull the keyless preview and recompute the percentages from the two raw numbers:
+
+```bash
+# 1. Pull the reference basket + benchmark table (no key needed)
+curl -s https://btc-signal-distribution.fly.dev/v1/program/preview
+
+# 2. Recompute "% cheaper" vs DCA from avg_cost_basis and benchmarks.dca.value
+curl -s https://btc-signal-distribution.fly.dev/v1/program/preview \
+  | jq '(1 - .avg_cost_basis / .benchmarks.dca.value) * 100'
+# → 53.6
+```
+
+Run a bounded simulation against your own equity and cadence, then check the same identity holds:
+
+```bash
+curl -s -X POST https://btc-signal-distribution.fly.dev/v1/program/preview/simulate \
+  -H "Content-Type: application/json" \
+  -d '{ "equity_usd": 100000, "contribution_cadence_bars": 84 }' \
+  | jq '{ avg: .avg_cost_basis,
+          dca_pct_cheaper: ((1 - .avg_cost_basis / .benchmarks.dca.value) * 100) }'
+```
+
+If your recomputed `pct_cheaper` matches the `pct_cheaper` the API returns, you have reproduced the
+sales-page numbers end-to-end from the keyless preview.
+
+<CardGroup cols={2}>
+  <Card title="Endpoints" href="/docs/buy-program/endpoints">
+    The keyless preview and gated program API in full.
+  </Card>
+  <Card title="The data model" href="/docs/buy-program/data-model">
+    The deployment object the window is built from.
+  </Card>
+</CardGroup>

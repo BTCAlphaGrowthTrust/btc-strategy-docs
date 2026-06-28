@@ -1,0 +1,87 @@
+---
+title: Verify it yourself
+description: Curl the keyless Demeter preview and simulate endpoints and recompute every sales-page number end-to-end — no API key required.
+sidebar_label: Verify it yourself
+sidebar_position: 4
+---
+
+# Verify it yourself
+
+You do not need an API key, an entitlement, or our word for any of it. **Every Demeter sales-page
+number is reproducible from the keyless preview surface.** Pull the raw numbers and recompute the
+percentages yourself with the formulas from **[Benchmark methodology](./benchmark-methodology)**.
+
+## 1. Pull the keyless preview
+
+```bash
+curl -s https://btc-signal-distribution.fly.dev/v1/program/preview
+```
+
+This returns `avg_cost_basis` and, for each benchmark (`dca`, `vwap`, `lump_sum`, `hodl`), its
+`value`, `advantage_bps` and `pct_cheaper`.
+
+## 2. Recompute "% cheaper" from the two raw numbers
+
+The only inputs are `avg_cost_basis` and a benchmark's `value`:
+
+```bash
+curl -s https://btc-signal-distribution.fly.dev/v1/program/preview \
+  | jq '{
+      avg: .avg_cost_basis,
+      dca:  ((1 - .avg_cost_basis / .benchmarks.dca.value)      * 100),
+      vwap: ((1 - .avg_cost_basis / .benchmarks.vwap.value)     * 100),
+      lump: ((1 - .avg_cost_basis / .benchmarks.lump_sum.value) * 100),
+      hodl: ((1 - .avg_cost_basis / .benchmarks.hodl.value)     * 100)
+    }'
+```
+
+Expected, against the current reference figures:
+
+```text
+avg  = 7172.66
+dca  = 53.6      (vs $15,462)
+vwap = 75.1      (vs $28,819)
+lump = 44.5      (vs $12,920)
+hodl = 44.5      (vs $12,920)
+```
+
+Your recomputed values should match the `pct_cheaper` the API already returns for each benchmark.
+
+## 3. Recompute advantage in basis points
+
+```bash
+curl -s https://btc-signal-distribution.fly.dev/v1/program/preview \
+  | jq '((.benchmarks.dca.value - .avg_cost_basis) / .benchmarks.dca.value) * 10000'
+# → 5361   (= 53.6% × 100)
+```
+
+`advantage_bps` and `pct_cheaper` are the same quantity in different units: `advantage_bps =
+pct_cheaper × 100`.
+
+## 4. Simulate against your own equity (bounded, keyless)
+
+```bash
+curl -s -X POST https://btc-signal-distribution.fly.dev/v1/program/preview/simulate \
+  -H "Content-Type: application/json" \
+  -d '{ "equity_usd": 100000, "contribution_cadence_bars": 84 }' \
+  | jq '{ avg: .avg_cost_basis,
+          dca_pct_cheaper: ((1 - .avg_cost_basis / .benchmarks.dca.value) * 100) }'
+```
+
+The `simulate` response carries the same `avg_cost_basis` and benchmark table, so the identity from
+step 2 holds there too.
+
+:::note If the numbers match, you have reproduced the sales page
+When your recomputed `pct_cheaper` and `advantage_bps` agree with what the keyless API returns, you
+have reproduced every published Demeter number end-to-end — from raw deployments to headline figure
+— with no key and no trust required.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Benchmark methodology" href="/docs/buy-program/benchmark-methodology">
+    The exact formula behind each number you just reproduced.
+  </Card>
+  <Card title="Endpoints" href="/docs/buy-program/endpoints">
+    The full keyless preview and gated program API.
+  </Card>
+</CardGroup>

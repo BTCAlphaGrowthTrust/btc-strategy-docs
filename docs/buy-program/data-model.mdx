@@ -1,0 +1,117 @@
+---
+title: The basket data model
+description: The Demeter basket object — deploy_pct, static tier weights, deployment_state, and why there is no stop.
+sidebar_label: Data model
+sidebar_position: 1
+---
+
+# The basket data model
+
+Every Demeter deployment — and every row returned by the program API — describes **how much of your
+equity to deploy** into BTC at a statistically cheap moment. The contract is product-agnostic: the
+product discriminator is the **`alias`** field, which is always **`demeter`**.
+
+## A deployment object
+
+```json
+{
+  "schema_version": "1.0", "alias": "demeter",
+  "deploy_id": "dep_demeter_000128", "seq": 128,
+  "timestamp": "2026-06-28T12:00:00Z", "timestamp_ms": 1782648000000,
+  "is_test": false, "tier": "core", "depth": "d1",
+  "instrument": "BTC-USDT-SPOT", "venue": "spot",
+  "reference_price": 7172.66, "price_as_of": "2026-06-28T12:00:00Z",
+  "deploy_pct": 0.060, "tier_weight": 0.60,
+  "deployment_state": "accumulating",
+  "tv_status": "provisional",
+  "disclaimer": "Advisory accumulation program; not custody, not personal financial advice."
+}
+```
+
+## `deploy_pct` — the one number that matters
+
+`deploy_pct` is the **fraction of your equity** the program advises you to deploy into BTC **at this
+fire**. It is the accumulation analogue of the signal feed's sizing input — but there is no risk or
+stop math behind it: you simply move `deploy_pct × your_equity` of cash into spot BTC and hold it.
+
+:::note `deploy_pct`, not `base_risk_pct`
+Demeter has **no risk-per-trade** concept and **no stop**. The size field is **`deploy_pct`** — a
+plain fraction of equity to deploy. Do **not** look for `base_risk_pct`, `stop`, `effective_risk_pct`
+or leverage here; an accumulation basket has none of them.
+:::
+
+## No stop field — accumulators hold through drawdowns
+
+:::danger There is no stop, by design
+Demeter is an **accumulation** program. It **holds through drawdowns** — that is the entire point of
+buying statistical dips. There is **no stop field**, no exit signal, and no flat. A deeper drawdown
+after a deployment is not a loss to be cut; it is, if anything, the next deployment opportunity. If
+you are looking for protective-stop or exit semantics, you want the **active signal feed**, not
+Demeter.
+:::
+
+## Tiers and static weights
+
+The basket deploys across three tiers, **aliased by horizon**, with **static** weights — they do not
+drift between deployments:
+
+| Tier | Horizon | Static weight | Depth bands |
+|---|---|---|---|
+| `core` | longest | **0.60** | `d1` \| `d2` |
+| `cyclical` | medium | **0.20** | `d1` \| `d2` |
+| `tactical` | shortest | **0.20** | `d1` \| `d2` |
+
+`tier_weight` on a deployment is the static weight of its tier. `depth` (`d1` shallower, `d2` deeper)
+identifies which dip band triggered the fire. A deployment is fully described by **tier × depth** —
+no other mechanism detail is exposed.
+
+## `deployment_state`
+
+Every deployment and the program manifest carry a `deployment_state` describing where the basket is
+in its accumulation cycle:
+
+| State | Meaning |
+|---|---|
+| `accumulating` | Actively deploying into dips; capital remains to put to work. |
+| `fully_deployed` | The window's planned capital is deployed; holding, awaiting replenishment. |
+| `replenishing` | Fresh contributions received; the basket is taking on new capital to deploy. |
+
+## Field reference
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | string | Payload schema version. `"1.0"` today. |
+| `alias` | string | **The product identifier.** Always `"demeter"`. |
+| `deploy_id` | string | Stable unique id for this deployment — your dedupe key. |
+| `seq` | integer | Monotonic per-program sequence number. Used by `deploys?since=`. |
+| `timestamp` | string (ISO-8601 UTC) | When the deployment fired. |
+| `timestamp_ms` | integer | Same instant as Unix epoch milliseconds. |
+| `is_test` | boolean | **`true` = test/connectivity fire — MUST be skipped.** `false` = real deployment. |
+| `tier` | enum | `core` \| `cyclical` \| `tactical` — the horizon-aliased tier. |
+| `depth` | enum | `d1` (shallower dip) \| `d2` (deeper dip). |
+| `instrument` | string | Always `"BTC-USDT-SPOT"`. |
+| `venue` | string | `"spot"`. |
+| `reference_price` | number | Reference BTC price at the deployment — used for all benchmark math. |
+| `price_as_of` | string (ISO-8601 UTC) | Timestamp the `reference_price` was observed. |
+| `deploy_pct` | number | **Fraction of YOUR equity to deploy at this fire** (e.g. `0.060` = 6%). |
+| `tier_weight` | number | Static weight of the tier (`core` 0.60 \| `cyclical` 0.20 \| `tactical` 0.20). |
+| `deployment_state` | enum | `accumulating` \| `fully_deployed` \| `replenishing`. |
+| `tv_status` | enum | External cross-check status. Always `provisional` for Demeter. |
+| `disclaimer` | string | Standing advisory disclaimer carried on every deployment. |
+
+## HARD RULE — `is_test` is honored
+
+:::danger Drop `is_test: true` before anything else
+Just as on the signal feed, **`is_test: true` is an occasional connectivity / test fire — never a
+real deployment.** Gate on it first. Acknowledge it and do nothing with it. A real deployment is
+always `is_test: false`.
+:::
+
+<CardGroup cols={2}>
+  <Card title="Endpoints" href="/docs/buy-program/endpoints">
+    The gated program API and the keyless marketing preview.
+  </Card>
+  <Card title="Benchmark methodology" href="/docs/buy-program/benchmark-methodology">
+    How deploy_pct and reference_price roll up into the published numbers.
+  </Card>
+</CardGroup>
