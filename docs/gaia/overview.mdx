@@ -49,8 +49,11 @@ A deployment is fully described by its tier (`core` / `cyclical` / `tactical`) a
 :::note Gaia is backtested and engine-verified — but it is *not* one of the dual-verified signal strategies
 Gaia is **backtested** and **engine-verified**: the production engine is **bit-exact** against a
 canonical reference port, so the numbers the program publishes are exactly the numbers the
-methodology computes. Its `tv_status` is **`provisional`** — it has **not** completed independent
-forward verification, and it is **not** part of the dual-verified live signal set. Treat Gaia as
+methodology computes. Its **allocation logic is independently verified** against a hand-authored
+TradingView indicator — **94% of deploys land on the same bar at the same price**. Its `tv_status`
+remains **`provisional`**: it has **not** completed independent *forward* verification, and the
+published **avg cost and DCA-savings figures are engine-backtested, not independently
+TradingView-verified**. It is **not** part of the dual-verified live signal set. Treat Gaia as
 an advisory accumulation aid, not a verified live-trading strategy.
 :::
 
