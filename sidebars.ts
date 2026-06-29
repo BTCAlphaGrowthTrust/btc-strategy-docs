@@ -37,14 +37,14 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Buy Program',
+      label: 'Gaia',
       collapsed: false,
       items: [
-        'buy-program/overview',
-        'buy-program/data-model',
-        'buy-program/endpoints',
-        'buy-program/benchmark-methodology',
-        'buy-program/verify',
+        'gaia/overview',
+        'gaia/data-model',
+        'gaia/endpoints',
+        'gaia/benchmark-methodology',
+        'gaia/verify',
       ],
     },
     {

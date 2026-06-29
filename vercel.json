@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    {
+      "source": "/docs/buy-program",
+      "destination": "/docs/gaia/overview",
+      "statusCode": 301
+    },
+    {
+      "source": "/docs/buy-program/:path*",
+      "destination": "/docs/gaia/:path*",
+      "statusCode": 301
+    }
+  ]
+}

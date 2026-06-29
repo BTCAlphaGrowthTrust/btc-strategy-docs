@@ -47,9 +47,17 @@ equal_usd = (Σ usd_i) ÷ N_contributions
 dca_avg   = (Σ usd_i) ÷ Σ (equal_usd ÷ price_at_contribution)
 ```
 
-The cadence is **one buy per contribution period of 84 × 4H bars (≈ biweekly)**: `N_contributions`
-is the number of those periods in the window, each buying `equal_usd` of BTC at that period's price.
-Same total dollars as Gaia, spread evenly over the calendar instead of concentrated into dips.
+The cadence is **Gaia's own contribution cadence** — the reference basket contributes every 84 × 4H
+bars (≈ biweekly), so the DCA buys on that same biweekly cadence: `N_contributions` is the number of
+those periods in the window, each buying `equal_usd` of BTC at that period's price. Same cadence, same
+total dollars as Gaia — **the only difference is timing**: Gaia holds the contribution and deploys into
+statistical dips; calendar-DCA spends it on the contribution date.
+
+**The DCA benchmark uses your exact contribution schedule.** In the [Model your treasury](https://www.btcalpha.com.au/gaia#model)
+simulator, change the contribution frequency (weekly / biweekly / monthly) and the DCA benchmark
+re-computes to that same cadence — the "% cheaper than DCA" you see is always Gaia-vs-DCA on *your*
+schedule, never a mismatched-cadence comparison. (Equal-USD avg cost is scale-invariant, so the
+benchmark is set by the cadence, not the dollar size.)
 
 ## lump-sum
 
@@ -158,10 +166,10 @@ If your recomputed `pct_cheaper` matches the `pct_cheaper` the API returns, you 
 sales-page numbers end-to-end from the keyless preview.
 
 <CardGroup cols={2}>
-  <Card title="Endpoints" href="/docs/buy-program/endpoints">
+  <Card title="Endpoints" href="/docs/gaia/endpoints">
     The keyless preview and gated program API in full.
   </Card>
-  <Card title="The data model" href="/docs/buy-program/data-model">
+  <Card title="The data model" href="/docs/gaia/data-model">
     The deployment object the window is built from.
   </Card>
 </CardGroup>
