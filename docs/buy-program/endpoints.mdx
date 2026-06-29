@@ -1,13 +1,13 @@
 ---
 title: Program endpoints
-description: The gated Demeter program API and the keyless marketing preview — manifest, basket, deploys, performance, profile and simulate.
+description: The gated Gaia program API and the keyless marketing preview — manifest, basket, deploys, performance, profile and simulate.
 sidebar_label: Endpoints
 sidebar_position: 2
 ---
 
 # Program endpoints
 
-Demeter exposes **two surfaces**: a **gated product API** for entitled subscribers, and a **keyless
+Gaia exposes **two surfaces**: a **gated product API** for entitled subscribers, and a **keyless
 preview** for marketing and evaluation. Both share the base URL:
 
 ```text
@@ -16,7 +16,7 @@ https://btc-signal-distribution.fly.dev
 
 ## Gated product API
 
-Every gated endpoint requires an `X-API-Key` header **and** the **`demeter` entitlement** on that
+Every gated endpoint requires an `X-API-Key` header **and** the **`gaia` entitlement** on that
 key. Without the entitlement the key is rejected even if it is valid for the signal feed.
 
 | Method & path | Purpose |
@@ -29,7 +29,7 @@ key. Without the entitlement the key is rejected even if it is valid for the sig
 | `POST /v1/program/simulate` | Run the full basket over a window against your profile and get the benchmark table back. |
 
 :::note Entitlement is per-key
-`X-API-Key` alone is not enough — the key must carry the `demeter` entitlement. A signal-feed key
+`X-API-Key` alone is not enough — the key must carry the `gaia` entitlement. A signal-feed key
 without it gets `403`. See [error codes](/docs/concepts/error-codes).
 :::
 
@@ -52,7 +52,7 @@ curl https://btc-signal-distribution.fly.dev/v1/program/preview
 
 ```json
 {
-  "schema_version": "1.0", "alias": "demeter",
+  "schema_version": "1.0", "alias": "gaia",
   "deployment_state": "accumulating",
   "instrument": "BTC-USDT-SPOT",
   "window": { "bars": "4H", "start_close": 12920.0 },
@@ -83,7 +83,7 @@ curl -X POST https://btc-signal-distribution.fly.dev/v1/program/preview/simulate
 
 ```json
 {
-  "schema_version": "1.0", "alias": "demeter",
+  "schema_version": "1.0", "alias": "gaia",
   "input": { "equity_usd": 100000, "contribution_cadence_bars": 84 },
   "total_usd_deployed": 100000.0,
   "total_btc_accumulated": 13.943,

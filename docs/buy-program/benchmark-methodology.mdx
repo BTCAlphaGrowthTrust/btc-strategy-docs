@@ -1,13 +1,13 @@
 ---
 title: Benchmark methodology
-description: Exactly how every Demeter sales-page number is computed — avg cost basis, DCA, VWAP, lump-sum, HODL, advantage_bps and % cheaper — with a worked example you can recompute yourself.
+description: Exactly how every Gaia sales-page number is computed — avg cost basis, DCA, VWAP, lump-sum, HODL, advantage_bps and % cheaper — with a worked example you can recompute yourself.
 sidebar_label: Benchmark methodology
 sidebar_position: 3
 ---
 
 # Benchmark methodology
 
-This is the page a quant or treasury needs: **exactly how every published Demeter number is
+This is the page a quant or treasury needs: **exactly how every published Gaia number is
 computed**, so you can reproduce each one from the raw deployments. There is no magic and no hidden
 parameter — every figure is a closed-form function of the deployments and the 4H closes in the
 window. The whole window is available keyless from `GET /v1/program/preview`.
@@ -49,7 +49,7 @@ dca_avg   = (Σ usd_i) ÷ Σ (equal_usd ÷ price_at_contribution)
 
 The cadence is **one buy per contribution period of 84 × 4H bars (≈ biweekly)**: `N_contributions`
 is the number of those periods in the window, each buying `equal_usd` of BTC at that period's price.
-Same total dollars as Demeter, spread evenly over the calendar instead of concentrated into dips.
+Same total dollars as Gaia, spread evenly over the calendar instead of concentrated into dips.
 
 ## lump-sum
 
@@ -80,7 +80,7 @@ pct_cheaper   = (1 − avg_cost ÷ B) × 100
 ```
 
 These are the **same quantity** in different units: `advantage_bps = pct_cheaper × 100`. Both say
-"how far below the benchmark did Demeter's average cost land."
+"how far below the benchmark did Gaia's average cost land."
 
 ## % capital in the cheapest quartile
 

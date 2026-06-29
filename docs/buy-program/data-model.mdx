@@ -1,22 +1,22 @@
 ---
 title: The basket data model
-description: The Demeter basket object — deploy_pct, static tier weights, deployment_state, and why there is no stop.
+description: The Gaia basket object — deploy_pct, static tier weights, deployment_state, and why there is no stop.
 sidebar_label: Data model
 sidebar_position: 1
 ---
 
 # The basket data model
 
-Every Demeter deployment — and every row returned by the program API — describes **how much of your
+Every Gaia deployment — and every row returned by the program API — describes **how much of your
 equity to deploy** into BTC at a statistically cheap moment. The contract is product-agnostic: the
-product discriminator is the **`alias`** field, which is always **`demeter`**.
+product discriminator is the **`alias`** field, which is always **`gaia`**.
 
 ## A deployment object
 
 ```json
 {
-  "schema_version": "1.0", "alias": "demeter",
-  "deploy_id": "dep_demeter_000128", "seq": 128,
+  "schema_version": "1.0", "alias": "gaia",
+  "deploy_id": "dep_gaia_000128", "seq": 128,
   "timestamp": "2026-06-28T12:00:00Z", "timestamp_ms": 1782648000000,
   "is_test": false, "tier": "core", "depth": "d1",
   "instrument": "BTC-USDT-SPOT", "venue": "spot",
@@ -35,7 +35,7 @@ fire**. It is the accumulation analogue of the signal feed's sizing input — bu
 stop math behind it: you simply move `deploy_pct × your_equity` of cash into spot BTC and hold it.
 
 :::note `deploy_pct`, not `base_risk_pct`
-Demeter has **no risk-per-trade** concept and **no stop**. The size field is **`deploy_pct`** — a
+Gaia has **no risk-per-trade** concept and **no stop**. The size field is **`deploy_pct`** — a
 plain fraction of equity to deploy. Do **not** look for `base_risk_pct`, `stop`, `effective_risk_pct`
 or leverage here; an accumulation basket has none of them.
 :::
@@ -43,11 +43,11 @@ or leverage here; an accumulation basket has none of them.
 ## No stop field — accumulators hold through drawdowns
 
 :::danger There is no stop, by design
-Demeter is an **accumulation** program. It **holds through drawdowns** — that is the entire point of
+Gaia is an **accumulation** program. It **holds through drawdowns** — that is the entire point of
 buying statistical dips. There is **no stop field**, no exit signal, and no flat. A deeper drawdown
 after a deployment is not a loss to be cut; it is, if anything, the next deployment opportunity. If
 you are looking for protective-stop or exit semantics, you want the **active signal feed**, not
-Demeter.
+Gaia.
 :::
 
 ## Tiers and static weights
@@ -81,7 +81,7 @@ in its accumulation cycle:
 | Field | Type | Meaning |
 |---|---|---|
 | `schema_version` | string | Payload schema version. `"1.0"` today. |
-| `alias` | string | **The product identifier.** Always `"demeter"`. |
+| `alias` | string | **The product identifier.** Always `"gaia"`. |
 | `deploy_id` | string | Stable unique id for this deployment — your dedupe key. |
 | `seq` | integer | Monotonic per-program sequence number. Used by `deploys?since=`. |
 | `timestamp` | string (ISO-8601 UTC) | When the deployment fired. |
@@ -96,7 +96,7 @@ in its accumulation cycle:
 | `deploy_pct` | number | **Fraction of YOUR equity to deploy at this fire** (e.g. `0.060` = 6%). |
 | `tier_weight` | number | Static weight of the tier (`core` 0.60 \| `cyclical` 0.20 \| `tactical` 0.20). |
 | `deployment_state` | enum | `accumulating` \| `fully_deployed` \| `replenishing`. |
-| `tv_status` | enum | External cross-check status. Always `provisional` for Demeter. |
+| `tv_status` | enum | External cross-check status. Always `provisional` for Gaia. |
 | `disclaimer` | string | Standing advisory disclaimer carried on every deployment. |
 
 ## HARD RULE — `is_test` is honored
